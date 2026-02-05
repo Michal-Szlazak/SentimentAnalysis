@@ -8,29 +8,39 @@
 
 ## 1. Przegląd Literatury i Stan Badań
 
-    "ABSA.pdf": W artykule tym wprowadzone są autorskie modele Arctic-ABSA (oparte na LLaMA3.1 i ModernBERT), które zestawiono z GPT-4o, Claude 3.5 Sonnet oraz Mistral Large 2,,. 
+**[Large-Scale Aspect-Based Sentiment Analysis with Reasoning-Infused LLMs](https://arxiv.org/pdf/2601.03940)** <br>
+W artykule tym wprowadzone są autorskie modele Arctic-ABSA (oparte na LLaMA3.1 i ModernBERT), które zestawiono z GPT-4o, Claude 3.5 Sonnet oraz Mistral Large 2.
 
-    "TweetEval" - comperative evaluation for tweet classification.pdf": Badanie ocenia skuteczność modelu RoBERTa (w wariantach base i dotrenowanym na Twitterze) w porównaniu do metod FastText, SVM oraz Bi-LSTM,. 
+**[TWEETEVAL: Unified Benchmark and Comparative Evaluation for Tweet Classification](https://arxiv.org/pdf/2010.12421)** <br>
+Badanie ocenia skuteczność modelu RoBERTa (w wariantach base i dotrenowanym na Twitterze) w porównaniu do metod FastText, SVM oraz Bi-LSTM.
 
-    "llm-negotiations.pdf": Autorzy wykorzystują modele GPT-3.5 i GPT-4 w rolach negocjujących agentów (generatora i dyskryminatora), porównując je z modelami nadzorowanymi takimi jak RoBERTa, XLNet czy BERTweet,. 
+**[Sentiment Analysis through LLM Negotiations](https://arxiv.org/pdf/2311.01876)**<br>
+Autorzy wykorzystują modele GPT-3.5 i GPT-4 w rolach negocjujących agentów (generatora i dyskryminatora), porównując je z modelami nadzorowanymi takimi jak RoBERTa, XLNet czy BERTweet.
 
-    "arabic-semantic-analysis.pdf": Do klasyfikacji użyto architektur głębokiego uczenia LSTM, GRU i RNN, podczas gdy etykietowanie danych wspomagane było przez LLM takie jak GPT-4o, Claude 3 Sonnet, Gemini 2.5 Pro czy LLaMA 3,. 
+**[LLM-in-the-Loop Active Learning for Arabic](https://arxiv.org/pdf/2509.23515)**<br>
+Do klasyfikacji użyto architektur głębokiego uczenia LSTM, GRU i RNN, podczas gdy etykietowanie danych wspomagane było przez LLM takie jak GPT-4o, Claude 3 Sonnet, Gemini 2.5 Pro czy LLaMA 3.
 
-    "brain_data.pdf": W eksperymentach wykorzystano model CardiffNLP (oparty na RoBERTa) do etykietowania tekstu oraz sieci MLP i LSTM do przewidywania sentymentu bezpośrednio z sygnałów mózgowych (MEG),. (https://arxiv.org/pdf/2601.18792) 
+**[MEGnifying Emotion: Sentiment Analysis from Annotated Brain Data](https://arxiv.org/pdf/2601.18792)**<br>
+W eksperymentach wykorzystano model CardiffNLP (oparty na RoBERTa) do etykietowania tekstu oraz sieci MLP i LSTM do przewidywania sentymentu bezpośrednio z sygnałów mózgowych (MEG).
 
-    "model-uncertainty.pdf": Analiza problemu zmienności opiera się na studiach przypadków z użyciem GPT-4o i Mixtral 8x22B, omawiając także zachowanie modeli takich jak LLaMA czy Falcon,,. 
+**[An overview of model uncertainty and variability in LLM-based sentiment analysis: challenges, mitigation strategies, and the role of explainability](https://arxiv.org/pdf/2504.04462)**<br>
+Analiza problemu zmienności opiera się na studiach przypadków z użyciem GPT-4o i Mixtral 8x22B, omawiając także zachowanie modeli takich jak LLaMA czy Falcon.
 
-    "s12652-018-0862-8.pdf": Artykuł porównuje wydajność klasycznych klasyfikatorów uczenia maszynowego, takich jak SVM, Naive Bayes, Regresja Liniowa i Random Forest, w połączeniu z różnymi technikami ekstrakcji cech,. 
+**[Sentiment analysis: a review and comparative analysis over social media](https://www.researchgate.net/publication/362341564_A_Review_and_Comparative_Analysis_of_Sentiment_Analysis_Techniques)**<br>
+Artykuł porównuje wydajność klasycznych klasyfikatorów uczenia maszynowego, takich jak SVM, Naive Bayes, Regresja Liniowa i Random Forest, w połączeniu z różnymi technikami ekstrakcji cech.
 
-    "sa-in-llm-era-reality-check.pdf": Ewaluacja obejmuje duże modele językowe Flan-T5, Flan-UL2, ChatGPT i text-davinci-003, których wyniki zestawiono z mniejszym, wyspecjalizowanym modelem T5-large,. 
+**[Sentiment Analysis in the Era of Large Language Models: A Reality Check](https://arxiv.org/pdf/2305.15005)**<br>
+Ewaluacja obejmuje duże modele językowe Flan-T5, Flan-UL2, ChatGPT i text-davinci-003, których wyniki zestawiono z mniejszym, wyspecjalizowanym modelem T5-large. 
 
-    "sentiment-analysis.pdf": Ten przegląd literatury omawia szerokie spektrum architektur głębokiego uczenia stosowanych w analizie sentymentu, w tym CNN, RNN, LSTM, GRU, BERT, GNN oraz LLM,. 
+**[A review of sentiment analysis: tasks, applications, and deep learning techniques](https://www.researchgate.net/publication/381881700_A_review_of_sentiment_analysis_tasks_applications_and_deep_learning_techniques)**<br>
+Ten przegląd literatury omawia szerokie spektrum architektur głębokiego uczenia stosowanych w analizie sentymentu, w tym CNN, RNN, LSTM, GRU, BERT, GNN oraz LLM.
 
-    „emotion_classification.pdf”: Opisuje dwuetapowy proces, w którym zaawansowany model LLaMA-3 generuje wyjaśnienia kontekstowe dla niejednoznacznych wypowiedzi, którymi dostrajany jest klasyfikator RoBERTa. (https://arxiv.org/pdf/2502.19935) 
-
-    „sa-in-llm-era-reality-check.pdf”: Test porównawczy, zestawiający nowoczesne modele generatywne z mniejszymi, wyspecjalizowanymi modelami w różnych zadaniach z dziedziny analizy sentymentu. (https://arxiv.org/pdf/2305.15005) 
+**[RoBERTa with LLaMA-3 Generated Explanations for Multi-Label Emotion Classification](https://arxiv.org/pdf/2502.19935)**<br>
+Opisuje dwuetapowy proces, w którym zaawansowany model LLaMA-3 generuje wyjaśnienia kontekstowe dla niejednoznacznych wypowiedzi, którymi dostrajany jest klasyfikator RoBERTa. 
  
-    “sa-in-age-of-genai.pdf”: Zawiera porównanie skuteczności modeli LLM i modeli transformerowych (Encoder-only) na różnych zbiorach danych oraz przedstawione wyniki przy zastosowaniu różnych technik użycia LLM (np. zero-shot, few-shot). (https://link.springer.com/article/10.1007/s40547-024-00143-4) 
+**[Sentiment Analysis in the Age of Generative AI](https://link.springer.com/article/10.1007/s40547-024-00143-4)**<br>
+Zawiera porównanie skuteczności modeli LLM i modeli transformerowych (Encoder-only) na różnych zbiorach danych oraz przedstawione wyniki przy zastosowaniu różnych technik użycia LLM (np. zero-shot, few-shot). 
+
 ---
 
 ## 2. Charakterystyka Zbiorów Danych
