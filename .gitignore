@@ -1,2 +1,29 @@
 /datasets
 **/__pycache__/
+
+## Core LaTeX auxiliary files
+*.aux
+*.fdb_latexmk
+*.fls
+*.log
+*.synctex.gz
+*.toc
+*.out
+
+## Bibliography files (generated)
+*.bbl
+*.blg
+
+## Graphics/Figures (specific generated ones)
+*.pdftex
+*.eps_tex
+
+## Editor-specific (VS Code, TeXstudio, Overleaf)
+.vscode/
+*.bak
+*.sav
+*.swp
+*.lock
+
+## PDF Output
+*.pdf

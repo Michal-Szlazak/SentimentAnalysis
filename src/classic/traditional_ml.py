@@ -5,23 +5,6 @@ from sklearn.naive_bayes import MultinomialNB
 from sklearn.svm import LinearSVC
 from sklearn.metrics import accuracy_score
 
-from utils.dataset_loader import prepare_datasets
-
-# 1. Konfiguracja plików
-files = {
-    "tweet_eval_irony": "TweetEvalIrony/tweeteval_irony.parquet",
-    "tweet_eval_sentiment": "TweetEvalSentiment/tweeteval_sentiment.parquet",
-    "twitter": "Twitter/twitter.parquet",
-    "imdb": "IMDB/imdb.parquet",
-    "yelp_test": "Yelp/yelp_test.parquet",
-    "yelp_train": "Yelp/yelp_train.parquet",
-    "finance_50agree": "FinancialPhraseBank/financial_phrasebank_50Agree.parquet",
-    "finance_66agree": "FinancialPhraseBank/financial_phrasebank_66Agree.parquet",
-    "finance_75agree": "FinancialPhraseBank/financial_phrasebank_75Agree.parquet",
-    "finance_all_agree": "FinancialPhraseBank/financial_phrasebank_AllAgree.parquet"
-}
-
-# 2. Funkcja analityczna (Pipeline ML)
 def run_traditional_ml(name, data_bundle):
     print(f"\n{'='*40}\nAnaliza dla: {name}\n{'='*40}")
     
