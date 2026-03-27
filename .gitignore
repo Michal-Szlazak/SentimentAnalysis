@@ -27,3 +27,8 @@
 
 ## PDF Output
 *.pdf
+
+#additional
+*.env
+data_cache/
+subsets/

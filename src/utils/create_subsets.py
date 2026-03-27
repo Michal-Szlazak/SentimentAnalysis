@@ -1,10 +1,11 @@
 import os
 import json
 from pathlib import Path
-import pandas as pd  # dodaj import
+import pandas as pd
+from sklearn.model_selection import train_test_split
 
 from dataset_loader import prepare_datasets
-from subset_sampler import SubsetSampler
+from data_downloader import load_cached_datasets, download_and_cache_datasets
 
 def save_jsonl(df, path, text_column="text", label_column="sentiment"):
     path = Path(path)
@@ -20,33 +21,50 @@ def save_prompt_examples(df, path, text_column="text", label_column="sentiment",
     path = Path(path)
     path.parent.mkdir(parents=True, exist_ok=True)
 
-    sampler = SubsetSampler(df, target_column=label_column, samples_per_class=examples_per_class)
-    examples = sampler.stratified_sample()
-
     out = []
-    for _, row in examples.iterrows():
-        out.append({"text": row[text_column], "label": row[label_column]})
-
+    
+    # Dla każdej klasy, weź dokładnie examples_per_class próbek
+    for class_label in sorted(df[label_column].unique()):
+        class_df = df[df[label_column] == class_label]
+        
+        # Losuj bez zastępowania, max ile przykładów jest dostępnych
+        num_samples = min(examples_per_class, len(class_df))
+        
+        sampled = class_df.sample(n=num_samples, random_state=42)
+        
+        for _, row in sampled.iterrows():
+            out.append({"text": row[text_column], "label": row[label_column]})
+    
     with path.open("w", encoding="utf-8") as f:
         json.dump(out, f, ensure_ascii=False, indent=2)
 
 def create_subsets_from_prepared(
     prepared_datasets,
     out_dir,
-    samples_per_class=500,
+    target_sample_size=2000,
     split_name="test",  # tylko dane testowe
 ):
     for name, data in prepared_datasets.items():
-        # Konwertuj na DataFrame
-        df = pd.DataFrame({
-            'text': data[f'X_{split_name}'],
-            'sentiment': data[f'y_{split_name}']
-        })
-        sampler = SubsetSampler(df, target_column="sentiment", samples_per_class=samples_per_class)
-        subset = sampler.stratified_sample()
-        out_path = Path(out_dir) / f"{name}_{split_name}_balanced.jsonl"
-        save_jsonl(subset, out_path)
-
+            df = pd.DataFrame({
+                'text': data[f'X_{split_name}'],
+                'sentiment': data[f'y_{split_name}']
+            })
+            
+            # Oblicz frakcję na podstawie stałego limitu
+            # Jeśli zbiór ma 74k, frakcja będzie mała. 
+            # Jeśli zbiór ma 1500, frakcja wyniesie 0.99 (weźmie prawie wszystko).
+            test_fraction = min(target_sample_size / len(df), 0.99)
+            
+            _, subset = train_test_split(
+                df,
+                test_size=test_fraction,
+                stratify=df['sentiment'],
+                random_state=42
+            )
+            
+            # Reszta kodu bez zmian...
+            out_path = Path(out_dir) / f"{name}_{split_name}_stratified.jsonl"
+            save_jsonl(subset, out_path)
 def create_prompt_examples_from_prepared(
     prepared_datasets,
     out_dir,
@@ -63,32 +81,27 @@ def create_prompt_examples_from_prepared(
         save_prompt_examples(df, out_path, examples_per_class=examples_per_class)
 
 if __name__ == "__main__":
-    from datasets import load_dataset
-
-    files = {
-        "tweet_eval_irony": "TweetEvalIrony/tweeteval_irony.parquet",
-        "tweet_eval_sentiment": "TweetEvalSentiment/tweeteval_sentiment.parquet",
-        "twitter": "Twitter/twitter.parquet",
-        "imdb": "IMDB/imdb.parquet",
-        "yelp_test": "Yelp/yelp_test.parquet",
-        "yelp_train": "Yelp/yelp_train.parquet",
-        "finance_50agree": "FinancialPhraseBank/financial_phrasebank_50Agree.parquet",
-        "finance_66agree": "FinancialPhraseBank/financial_phrasebank_66Agree.parquet",
-        "finance_75agree": "FinancialPhraseBank/financial_phrasebank_75Agree.parquet",
-        "finance_all_agree": "FinancialPhraseBank/financial_phrasebank_AllAgree.parquet"
-    }
-    raw = {n: load_dataset("szlazakm/SentimentAnalysis", data_files=p) for n, p in files.items()}
+    # Pobierz i cache'uj zbiory (jeśli już nie istnieją)
+    print("🔄 Sprawdzanie cache danych...\n")
+    download_and_cache_datasets()
+    
+    print("\n📂 Załadowanie cache'owanych zbiorów...\n")
+    raw = load_cached_datasets()
     prepared = prepare_datasets(raw)
 
+    print("\n📝 Tworzenie subsetów...\n")
     create_subsets_from_prepared(
         prepared,
         out_dir=r"c:\Users\bushi\Documents\GitHub\SentimentAnalysis\subsets",
         split_name="test",
     )
 
+    print("\n📝 Tworzenie przykładów do promptów...\n")
     create_prompt_examples_from_prepared(
         prepared,
         out_dir=r"c:\Users\bushi\Documents\GitHub\SentimentAnalysis\subsets",
         examples_per_class=3,
         split_name="train",
     )
+    
+    print("\n✅ Wszystko gotowe!")
