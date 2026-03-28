@@ -127,6 +127,13 @@ def interactive_mode():
             max_samples = int(max_samples)
         except ValueError:
             max_samples = 50
+
+        workers = input("Parallel requests/workers? [default: 1]: ").strip() or "1"
+        try:
+            workers = int(workers)
+        except ValueError:
+            print("❌ Invalid workers value, using 1")
+            workers = 1
         
         print()
         classify_dataset(
@@ -134,7 +141,8 @@ def interactive_mode():
             output_file=output_file,
             batch_size=batch_size,
             max_samples=max_samples,
-            dataset_key=PROMPT_KEYS[dataset]
+            dataset_key=PROMPT_KEYS[dataset],
+            max_workers=workers,
         )
     
     elif mode == "2":
@@ -146,7 +154,8 @@ def interactive_mode():
                 input_file=input_file,
                 output_file=output_file,
                 batch_size=10,
-                dataset_key=PROMPT_KEYS[dataset]
+                dataset_key=PROMPT_KEYS[dataset],
+                max_workers=1,
             )
         else:
             print("❌ Cancelled")
@@ -168,7 +177,8 @@ def cli_mode(args):
         output_file=output_file,
         batch_size=args.batch_size,
         max_samples=args.max_samples,
-        dataset_key=prompt_key
+        dataset_key=prompt_key,
+        max_workers=args.workers,
     )
 
 def main():
@@ -209,18 +219,15 @@ Examples:
         help="Maximum texts to process (default: all)"
     )
     parser.add_argument(
+        "--workers",
+        type=int,
+        default=1,
+        help="Parallel API requests (default: 1, recommended: 3-5)"
+    )
+    parser.add_argument(
         "--list-datasets",
-            parser.add_argument(
-                "--workers",
-                type=int,
-                default=1,
-                help="Parallel API requests (default: 1, recommended: 3-5)"
-            )
-            parser.add_argument(
-                "--list-datasets",
         action="store_true",
         help="List available datasets and exit"
-        max_workers=args.workers,
     )
     
     args = parser.parse_args()
