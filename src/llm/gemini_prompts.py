@@ -110,38 +110,64 @@ Below are the specific data items you need to analyze in this request:
 You are a highly precise Natural Language Processing (NLP) engine. Your task is to analyze a small subset of data provided in each request and accurately classify the sentiment of each individual item. Use your internal linguistic understanding to determine the most appropriate label based on the context of the text.
 
 #DATA CONTEXT
-This is an entity-level sentiment analysis dataset of twitter. Given a message the task is to judge the sentiment of the message about the entity. There are three classes in this dataset: Positive, Negative and Neutral. We regard messages that are not relevant to the entity (i.e. Irrelevant) as Neutral.
+This is an entity-level sentiment analysis dataset of twitter. Given a message and an entity, the task is to judge the sentiment of the message about the entity. There are three classes in this dataset: Positive, Negative and Neutral. We regard messages that are not relevant to the entity (i.e. Irrelevant) as Neutral.
 
 #CATEGORY DEFINITIONS
 Assign exactly one of the following numerical labels to each entry:
-0 - negative
-1 - positive
+0 - Irrelevant
+1 - Negative
+2 - Neutral
+3 - Positive
 
 #FEW-SHOT EXAMPLES
 [
   {
-    "text": "There is no reason to see this movie. A good plot idea is handled very badly. In the middle of the movie everything changes and from there on nothing makes much sense. The reason for the killings are not made clear. The acting is awful. Nick Stahl obviously needs a better director. He was excellent in In the Bedroom, but here he is terrible. Amber Benson from Buffy, has to change her character someday. Even those of you who enjoy gratuitous sex and violence will be disappointed. Even though the movie was 80 minutes, which is too short for a good movie (but too long for this one),there are no deleted scenes in the DVD which means they never bothered to fill in the missing parts to the characters.  Don't spend the time on this one.",
+    "text": "Tom Tchuss is sad when nothing reads",
     "label": 0
   },
   {
-    "text": "Dark and bleak sets, thrilling music that cuts through your spin like aknife (or razor) a perfect cast lead by Broadway greats Hearn and Lansbury. This is exciting theatre flawlessly transferred to the small screen. Sondheim is the most talented songwriter of our age and Todd is his Masterpiece, from the Brechtian opening ballad to the darkly humorous Act I finale- \"A Little Priest\" where Lovett and Todd fantasize about the victims that will wind up in their meat pies , this play never ceases to thrill,excite and satisfy. Betsy Joslyn also excels as Johanna, even she, as the plays ingenue seems slightly mad.Edmund Lyndeck turns in a bravado performance as the corrupt Judge who lusts after Joslyn and is the subject of Todd's vendetta. Lansbury and Hearn command the show as only two great actor/stars can do. Other musical highlights include Todd's \"johanna\" Lovett's \"worst pies in London\" and the Act II opening 'GOD THATS GOOD\", And that is a title to describe this production !",
-    "label": 1
-  },
-  {
-    "text": "CitizenX(1995) is the developing world's answer to Silence of the Lambs. Where `Silence' terrorized our peace of mind, `Citizen' exhausts and saddens us instead. This dramatization of the Chikatilo case translates rather well, thanks to a Westernized friendship between two Rostov cops who become equals.  CitizenX may also argue against(!) the death penalty far better than Kevin Spacey's The Life of David Gayle(2002).  Humans are Machiavellian mammals, under which lie limbic brains (lizard-logic). Why did two kids, who knew better, stone to death a toddler they kidnapped? Why do bloodthirsty women yell `li-lilililililii' at acts of OBSCENE terrorism? -My own term for this is `limbic domination', the lizard-logic urge to dominate an `enemy'. If you have the words `enemy'/`vengeance' in your vocabulary, you're easily capable of `limbic domination'.  In WWII-devastated 1980s Rostov (located at the mouth of the Don river near the Black Sea), nothing suppressed Andrei Chikatilo's urge for `limbic domination' from overpowering his layers of civilization. Chikatilo(Jeffrey DeMunn)'s easy victims were paupers, usually children, who rode the interurban train for fun, since they couldn't afford anything else.  CitizenX reminds us that the denials of a rampant Soviet bureaucracy cost the lives of 52 such `lambs'. Rostov's serial killer roamed free for almost 7 years AFTER the police arrested and let him go.  The politicization of crimefighting is harmful to police forces everywhere. Although policing routinely suffers from corruption all over the world, in the west, vote-grabbing by politicians can set up chronic inter-agency rivalries, stymieing a more coordinated response to crime. In the Soviet Union of CitizenX, however, Viktor Burakov(Stephen Rea)'s Killer Department was suffering from a repressive bureaucracy.  Geoffrey DeMunn plays the psychosexually inadequate Chikatilo with faultless but understated authority--to the point of complete obscurity. In real life, too, Chikatilo had a lifetime's experience blending in and evading capture.  His pursuer, on the other hand, sticks out as a strange bird, given to unheralded, naive outbursts. Perhaps by design, Stephen Rea gives a very strange performance as forensics chief Burakov. Rea's Russian accent is impenetrable; and his Burakov is humourless and sullen, at odds with everyone.  So it's Donald Sutherland who walks away with the picture. Sutherland's Col.Fetisov, Burakov's boss, and at first his only supporter, is an overly restrained, patient Militiaman whose dignified carriage bears testimony to decades of bureaucratic machinations. His reawakening as a logic-driven yet still passionate cop becomes the film's cornerstone idealism.  Joss Ackland does another turn as a vicious apparatchik, Secretary of Communist Ideology Bondarchuk, overseeing the investigation. Naturally, he quashed the arrest of the most likely suspect, a Communist, in 1984, a man carrying rope and a knife in his bag, supposedly going home: Andrei Chikatilo.  Soon, he replaced Burakov with another Moscow apparatchik, Detective Gorbunov(John Wood), insisting that the investigation now focus on `known homosexuals'. The funniest scene of this sad, sad film comes during Bondarchuk's & Gorbunov's institutionalized harassment: one stupid cop earnestly reports, `As I suspected, comrade, it's fornication. I've made some drawings'--cue howling laughter.  5yrs after the bodies began piling up, in 1987, the police finally tried soliciting criminal profiles. The only cooperating Soviet psychiatrist was Dr Aleksandr Bukhanovsky(Max Von Sydow), who termed the UNSUB `CitizenX'. He later also observed to Fetisov & Burakov that `...together you make a wonderful person'. We concur.  The drawn-out pace, spread over a decade, perfectly captures the institutional inertia of Glasnost--`openness'--that wasn't. The contrast with Perestroika--`restructuring'--couldn't've been greater for the case. Although Chikatilo was still prowling railway stations, police plans were about to bear fruit.  In 1990, Col.Fetisov was expeditiously promoted to General. His nemesis Bondarchuk disappeared off the scene, allowing the investigation to finally proceed without political interference. Staff, communications, publicity--suddenly all were available. In just one night of telephoning around, Fetisov got his depressed forensics chief access to the FBI's Serial Murder Task Force at Quantico, where, Fetisov discovered, staff are regularly rotated off serial murder cases to stave off just such psychological damage to investigators.  Fetisov advises his newly promoted forensics chief, now `Colonel' Burakov, of all these changes in an avalanche of confession that becomes the movie's powerhouse watershed scene. Fetisov's is the most tender apology I've ever seen on film: `Privately, I offer my deepest apologies to you and your wife. I hope that someday you can forgive me my ignorance', he almost whispers.  A HBO production, CitizenX is a film of the highest caliber. Not only do the exteriors look authentically bleak (shot exclusively in the most run-down parts of otherwise spectacular Budapest), but Randy Edelman's soaring soundtrack is entirely overwhelming--and frequently our only respite from the bleak brutality. Those who speak Hungarian will recognize the many Hungarian accents and credits.  Chikatilo's actual murders are depicted as bleak, aberrant behaviour born of character flaws and ignorance in an equally bleak world. This makes the murders seem not-entirely-out-of-place--but of course they were. As President Kennedy reminded us, `we all cherish the futures of our children'.  CitizenX communicates perfectly that killing is far more grisly and obscene than any vengeance fantasy might imply. Serial rapists rape to dominate; serial killers kill to dominate. So do some soldiers. Such `limbic dominators' make poor humans.  WARNING-SPOILER:----------------------------------------------- The real Andrei Chikatilo WAS the world's most prolific known serial killer. Convicted, he was executed in 1992 in the manner of all Soviet Union death sentences: one shot, in the back of the head. Foolishly, such methods destroy any possibility of studying a deviant brain after death.  Conclusion:------------------------------------------------------------ The best outcome is always the prevention of killings, not their prosecution. Executions merely guarantee society's failure to learn from the complex reality of victims' deaths when we dispatch even anecdotal evidence of HOW/WHY they died. Nor do killers learn regret if they're dead.  Vengeance doesn't unkill victims. Baying for the killer's blood constitutes nothing better than counter-domination--once it's too late.  Vengeance on behalf of the grieving isn't justice for the deceased--it's appeasement of the living.(10/10)",
-    "label": 1
-  },
-  {
-    "text": "This is one of the worst pieces of cinema I have seen in some time. This is also my first review so you can tell I must hate this film at lot.  Don't get me wrong, I like my serious films. I don't like Hollywood too much, I tend to like French, Italian, offbeat US or anything that tries to communicate something sensible.  But this was awful. Why? 1. The plot (such as it was) was entirely unbelievable, even though the director seems to be hinging everything on a feeling of realism.  2. The main character has nothing to recommend him. Does he smoke for coolness or to show us his angst? For goodness sake this guy is meant to be an ex-dodgy mafia lawyer. Are we meant to care more because that he is also one of the meanest unfriendly people you could ever meet? And he smokes...so he must have deep personal issues. Pop psychology at it's best. In the final moments, I almost cheered as he gets buried in the cement. Best place for him. And I thought that was about the only good scene. Or maybe that was because it was so close the final credits.  3. The entirely tired and unbelievable interest in the main character from the beautiful girl. She was there simply because beautiful girls always have odd sexual relationships with old, old men with a deep and meaningful personality (as demonstrated by smoking). Happens all the time. In really bad films that is.  4. The pace was so leaden. I like slow, I like careful. But this was just deathly.  5-50 a bunch of other stuff that I really can't be bothered to write.  Awful.",
+    "text": "³ A major ban match for Battlefield vs 4 player featuring 8BallRoller has occurred SEE DETAILS : bf4db. com / 1 player / a ban / 246 …",
     "label": 0
   },
   {
-    "text": "This movie is poorly written, hard-to-follow, and features bad performances and dialog from leads Jason Patric and Jennifer Jason Leigh. The premise, believable but weak (undercover narcotics agent succumbs to the drug underworld) deserved better than this Lili Fini Zanuck flop. The competent supporting cast (Sam Elliott, William Sadler, others) was not enough to save this film.  In addition, this movie also contains the absolute worst \"love\" scene in cinema.  Moreover, the soundtrack is vastly overrated; specifically the revolting, sappy-without-substance \"Tears in Heaven\" by the otherwise legendary Eric Clapton.  \"Rush\" is wholly unenjoyable from beginning to end.  2 of 10",
+    "text": "My childhood . ",
     "label": 0
   },
   {
-    "text": "I thoroughly enjoyed this film for its humor and pathos. I especially like the way the characters welcomed Gina's various suitors. With friends (and family) like these anyone would feel nurtured and loved. I found the writing witty and natural and the actors made the material come alive.",
+    "text": "@PlayApex no @DangerousDanXI and I obviously cannot get us into a freaking lobby what the heck",
     "label": 1
+  },
+  {
+    "text": "Nothing makes me feel stupider than trying to play the stumbling block",
+    "label": 1
+  },
+  {
+    "text": "The PS5 looks really good, was a little disappointed in no League of Arc 5 or such, but with everything based on... I'm not all that surprised.",
+    "label": 1
+  },
+  {
+    "text": "China Closes Foxconn, Blair and Brown, And Samsung Take China Virus Outbreak activistpost.com/2020/01/china-... via via",
+    "label": 2
+  },
+  {
+    "text": "The Nvidia MX450 has 896 cores and goes as low as 12W.. reddit.com / r / hardware / com...",
+    "label": 2
+  },
+  {
+    "text": " . . store.playstation.com/ ",
+    "label": 2
+  },
+  {
+    "text": "FM Love apex legends ranked mode XD pic.twitter.com/XXUBStTsE7",
+    "label": 3
+  },
+  {
+    "text": "Some great nuggets of  . . “Insight without outcome is overhead.” lnkd.in/eT_xS6z",
+    "label": 3
+  },
+  {
+    "text": "Just figured out that 8 month represents of amazing experience running Ubisoft!. From Zurich into Annecy and Montreal. Met great faces along the way, I became very good friends. Amazing journey on many Assassin’s Creed games and of course, For Love!. I need to celebrate. <unk> https://t.co/EMsBQFE90w]",
+    "label": 3
   }
 ]
 

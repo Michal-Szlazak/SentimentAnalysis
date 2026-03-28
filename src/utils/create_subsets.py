@@ -65,6 +65,21 @@ def create_subsets_from_prepared(
             # Reszta kodu bez zmian...
             out_path = Path(out_dir) / f"{name}_{split_name}_stratified.jsonl"
             save_jsonl(subset, out_path)
+def create_full_datasets_from_prepared(
+    prepared_datasets,
+    out_dir,
+):
+    """Zapisuje cały X_test/y_test do JSONL bez próbkowania."""
+    for name, data in prepared_datasets.items():
+        df = pd.DataFrame({
+            'text': data['X_test'],
+            'sentiment': data['y_test']
+        })
+
+        out_path = Path(out_dir) / f"{name}_full.jsonl"
+        save_jsonl(df, out_path)
+        print(f"✅ Saved {name}: {len(df)} samples → {out_path}")
+
 def create_prompt_examples_from_prepared(
     prepared_datasets,
     out_dir,
@@ -89,11 +104,18 @@ if __name__ == "__main__":
     raw = load_cached_datasets()
     prepared = prepare_datasets(raw)
 
-    print("\n📝 Tworzenie subsetów...\n")
-    create_subsets_from_prepared(
+    # print("\n📝 Tworzenie subsetów (stratified)...\n")
+    # create_subsets_from_prepared(
+    #     prepared,
+    #     out_dir=r"c:\Users\bushi\Documents\GitHub\SentimentAnalysis\subsets",
+    #     split_name="test",
+    # )
+
+#Pełne to w tym kontekście po prostu wszystkie dane testowe.
+    print("\n📝 Zapisywanie pełnych zbiorów do JSONL...\n")
+    create_full_datasets_from_prepared(
         prepared,
         out_dir=r"c:\Users\bushi\Documents\GitHub\SentimentAnalysis\subsets",
-        split_name="test",
     )
 
     print("\n📝 Tworzenie przykładów do promptów...\n")

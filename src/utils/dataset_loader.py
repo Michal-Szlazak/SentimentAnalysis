@@ -40,9 +40,13 @@ def prepare_datasets(datasets_dict):
             X_test, y_test = test_part['text'], test_part['label_int']
 
         elif name == "twitter":
-            # Twitter uses 'content' and 'sentiment'
-            df = df.dropna(subset=['content', 'sentiment'])
-            X = df['content']
+            # Twitter uses 'content', 'entity' and 'sentiment'
+            df = df.dropna(subset=['content', 'entity', 'sentiment']).copy()
+
+            # Combine content and entity for textual context and LLM compatibility
+            df['text_with_entity'] = df['content'].astype(str) + " [ENTITY: " + df['entity'].astype(str) + "]"
+
+            X = df['text_with_entity']
             y = le.fit_transform(df['sentiment'])
             X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
 

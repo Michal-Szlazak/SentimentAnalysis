@@ -11,6 +11,7 @@ from gemini_sentiment_classifier import classify_batch, classify_dataset, load_d
 
 # Available datasets in the subsets folder
 DATASETS = {
+    # Stratified subsets (test split only)
     "imdb": "imdb_test_stratified.jsonl",
     "twitter": "twitter_test_stratified.jsonl",
     "finance_50": "finance_50agree_test_stratified.jsonl",
@@ -20,10 +21,42 @@ DATASETS = {
     "yelp": "yelp_full_test_stratified.jsonl",
     "tweet_sentiment": "tweet_eval_sentiment_test_stratified.jsonl",
     "tweet_irony": "tweet_eval_irony_test_stratified.jsonl",
+    # Full datasets (train + test, wszystkie rekordy)
+    "imdb_full": "imdb_full.jsonl",
+    "twitter_full": "twitter_full.jsonl",
+    "finance_50_full": "finance_50agree_full.jsonl",
+    "finance_66_full": "finance_66agree_full.jsonl",
+    "finance_75_full": "finance_75agree_full.jsonl",
+    "finance_all_full": "finance_all_agree_full.jsonl",
+    "yelp_full": "yelp_full_full.jsonl",
+    "tweet_sentiment_full": "tweet_eval_sentiment_full.jsonl",
+    "tweet_irony_full": "tweet_eval_irony_full.jsonl",
 }
 
-SUBSETS_DIR = r"c:\\Users\\bushi\\Documents\\GitHub\\SentimentAnalysis\\src\\subsets"
-RESULTS_DIR = r"c:\\Users\\bushi\\Documents\\GitHub\\SentimentAnalysis\\src\\results"
+SUBSETS_DIR = r"c:\Users\bushi\Documents\GitHub\SentimentAnalysis\src\subsets"
+RESULTS_DIR = r"c:\Users\bushi\Documents\GitHub\SentimentAnalysis\src\results"
+
+# Maps every dataset key (incl. _full variants) to its prompt key in gemini_prompts.PROMPTS
+PROMPT_KEYS = {
+    "imdb":                 "imdb",
+    "imdb_full":            "imdb",
+    "twitter":              "twitter",
+    "twitter_full":         "twitter",
+    "finance_50":           "finance_50",
+    "finance_50_full":      "finance_50",
+    "finance_66":           "finance_66",
+    "finance_66_full":      "finance_66",
+    "finance_75":           "finance_75",
+    "finance_75_full":      "finance_75",
+    "finance_all":          "finance_all",
+    "finance_all_full":     "finance_all",
+    "yelp":                 "yelp",
+    "yelp_full":            "yelp",
+    "tweet_sentiment":      "tweet_sentiment",
+    "tweet_sentiment_full": "tweet_sentiment",
+    "tweet_irony":          "tweet_irony",
+    "tweet_irony_full":     "tweet_irony",
+}
 
 def get_input_file(dataset_key: str) -> str:
     """Get full path to dataset file."""
@@ -34,6 +67,7 @@ def get_input_file(dataset_key: str) -> str:
 def get_output_file(dataset_key: str) -> str:
     """Get output file path with gemini prefix."""
     base_name = DATASETS[dataset_key].replace("_test_stratified.jsonl", "_gemini_classified.jsonl")
+    base_name = base_name.replace("_full.jsonl", "_gemini_classified_full.jsonl")
     return str(Path(RESULTS_DIR) / base_name)
 
 def list_datasets():
@@ -100,7 +134,7 @@ def interactive_mode():
             output_file=output_file,
             batch_size=batch_size,
             max_samples=max_samples,
-            dataset_key=dataset  # DODAJ
+            dataset_key=PROMPT_KEYS[dataset]
         )
     
     elif mode == "2":
@@ -111,7 +145,8 @@ def interactive_mode():
             classify_dataset(
                 input_file=input_file,
                 output_file=output_file,
-                batch_size=10
+                batch_size=10,
+                dataset_key=PROMPT_KEYS[dataset]
             )
         else:
             print("❌ Cancelled")
@@ -119,22 +154,21 @@ def interactive_mode():
         print("❌ Invalid mode")
 
 def cli_mode(args):
-    """Command-line interface with arguments."""
-def cli_mode(args):
     input_file = get_input_file(args.dataset)
     output_file = get_output_file(args.dataset)
-    
-    print(f"📂 Dataset:  {get_dataset_name(args.dataset)}")
+    prompt_key = PROMPT_KEYS[args.dataset]
+
+    print(f"📂 Dataset:  {get_dataset_name(prompt_key)}")
     print(f"📂 Input:    {input_file}")
     print(f"📂 Output:   {output_file}")
     print()
-    
+
     classify_dataset(
         input_file=input_file,
         output_file=output_file,
         batch_size=args.batch_size,
         max_samples=args.max_samples,
-        dataset_key=args.dataset  # DODAJ TĘ LINIĘ
+        dataset_key=prompt_key
     )
 
 def main():
@@ -176,8 +210,17 @@ Examples:
     )
     parser.add_argument(
         "--list-datasets",
+            parser.add_argument(
+                "--workers",
+                type=int,
+                default=1,
+                help="Parallel API requests (default: 1, recommended: 3-5)"
+            )
+            parser.add_argument(
+                "--list-datasets",
         action="store_true",
         help="List available datasets and exit"
+        max_workers=args.workers,
     )
     
     args = parser.parse_args()

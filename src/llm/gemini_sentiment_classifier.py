@@ -5,6 +5,7 @@ Sends batches of texts to Gemini and saves results with sentiment labels.
 
 import json
 import os
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 from typing import Optional
 from dotenv import load_dotenv
@@ -16,7 +17,7 @@ load_dotenv()
 
 # Initialize client
 client = genai.Client()
-MODEL = "gemini-2.5-pro"
+MODEL = "gemini-2.5-flash"
 
 # Define structured output schema
 SENTIMENT_SCHEMA = {
@@ -72,7 +73,7 @@ Return your classification as JSON with the exact structure specified."""
     
     items_text = ""
     for i, item in enumerate(batch):
-        items_text += f"{start_index + i}. {item['text']}\n\n"
+        items_text += f"{start_index + i}. {item.get('text', '')}\n\n"
     
     prompt = f"""{instruction}
 
@@ -114,9 +115,9 @@ def classify_dataset(
     batch_size: int = 10,
     start_index: int = 0,
     max_samples: Optional[int] = None,
-    dataset_key: str = None,  # NOWY PARAMETR
+    dataset_key: str = None,
+    max_workers: int = 1,
 ):
-    # Załaduj prompt dla datasetu jeśli podany
     instruction = None
     if dataset_key:
         try:
@@ -124,50 +125,58 @@ def classify_dataset(
             instruction = get_instruction(dataset_key)
         except Exception:
             pass
-    
+
     print(f"📂 Loading dataset from {input_file}...")
     data = load_dataset(input_file)
-    
+
     if max_samples:
         data = data[:max_samples]
-    
     if start_index > 0:
         data = data[start_index:]
-    
+
     total = len(data)
-    print(f"✅ Loaded {total} samples\n")
-    
-    # Create output directory
+    print(f"✅ Loaded {total} samples | batch_size={batch_size} | workers={max_workers}\n")
+
     output_path = Path(output_file)
     output_path.parent.mkdir(parents=True, exist_ok=True)
-    
-    # Process in batches
-    with open(output_path, 'w', encoding='utf-8') as fout:
-        for batch_idx in range(0, total, batch_size):
-            batch_end = min(batch_idx + batch_size, total)
-            batch = data[batch_idx:batch_end]
-            
-            print(f"🔄 Processing batch {batch_idx // batch_size + 1} ({batch_idx}-{batch_end}/{total})...")
-            
+
+    batches = [
+        (batch_idx, data[batch_idx:min(batch_idx + batch_size, total)])
+        for batch_idx in range(0, total, batch_size)
+    ]
+    total_batches = len(batches)
+    batch_results = {}
+
+    def process_batch(batch_idx, batch):
+        classifications = classify_batch(batch, batch_idx + start_index, instruction)
+        return batch_idx, classifications
+
+    with ThreadPoolExecutor(max_workers=max_workers) as executor:
+        futures = {
+            executor.submit(process_batch, batch_idx, batch): batch_idx
+            for batch_idx, batch in batches
+        }
+        for future in as_completed(futures):
+            batch_idx = futures[future]
+            batch_num = batch_idx // batch_size + 1
             try:
-                # Get classifications from Gemini
-                classifications = classify_batch(batch, batch_idx + start_index, instruction)
-                
-                # Write results to output file
-                for item in classifications:
-                    output_line = {
-                        "text": item["text"],
-                        "sentiment": item["sentiment"],
-                        "original_index": item["index"]
-                    }
-                    fout.write(json.dumps(output_line, ensure_ascii=False) + "\n")
-                
-                print(f"✅ Batch {batch_idx // batch_size + 1} completed\n")
-                
+                _, classifications = future.result()
+                batch_results[batch_idx] = classifications
+                print(f"✅ Batch {batch_num}/{total_batches} completed")
             except Exception as e:
-                print(f"❌ Error on batch {batch_idx // batch_size + 1}: {str(e)}\n")
-                continue
-    
+                print(f"❌ Batch {batch_num}/{total_batches} error: {e}")
+                batch_results[batch_idx] = []
+
+    with open(output_path, 'w', encoding='utf-8') as fout:
+        for batch_idx in sorted(batch_results.keys()):
+            for item in batch_results[batch_idx]:
+                output_line = {
+                    "text": item.get("text", ""),
+                    "sentiment": item.get("sentiment", ""),
+                    "original_index": item.get("index")
+                }
+                fout.write(json.dumps(output_line, ensure_ascii=False) + "\n")
+
     print(f"\n✨ Classification complete! Results saved to {output_file}")
 
 # if __name__ == "__main__":
