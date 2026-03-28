@@ -1,0 +1,21 @@
+\begin{table}
+\caption{Sentiment Classification Results: Accuracy}
+\label{tab:sentiment_acc}
+\begin{tabularx}{\linewidth}{lXXXXX}
+\toprule
+ & \multicolumn{2}{c}{Bag-of-Words} & \multicolumn{2}{c}{TF-IDF} & \\
+\cmidrule(lr){2-3} \cmidrule(lr){4-5}
+Dataset & Naive Bayes & SVM & Naive Bayes & SVM & VADER \\
+\midrule
+Yelp & 0.532 & 0.482 & 0.547 & \textbf{0.568} & 0.321 \\
+TE-Irony & 0.637 & 0.627 & 0.631 & \textbf{0.644} & 0.475 \\
+TE-Sentiment & 0.583 & 0.586 & 0.579 & \textbf{0.602} & 0.535 \\
+Twitter & 0.664 & 0.775 & 0.684 & \textbf{0.779} & 0.340 \\
+IMDB & 0.850 & 0.870 & 0.869 & \textbf{0.906} & 0.699 \\
+Fin-50 & 0.764 & 0.786 & 0.775 & \textbf{0.791} & 0.540 \\
+Fin-66 & 0.776 & 0.829 & 0.789 & \textbf{0.831} & 0.572 \\
+Fin-75 & 0.815 & 0.860 & 0.828 & \textbf{0.867} & 0.576 \\
+Fin-All & 0.850 & \textbf{0.909} & 0.854 & \textbf{0.909} & 0.532 \\
+\bottomrule
+\end{tabularx}
+\end{table}

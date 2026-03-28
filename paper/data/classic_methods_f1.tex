@@ -1,0 +1,21 @@
+\begin{table}
+\caption{Sentiment Classification Results: Macro-F1}
+\label{tab:sentiment_f1}
+\begin{tabularx}{\linewidth}{lXXXXX}
+\toprule
+ & \multicolumn{2}{c}{Bag-of-Words} & \multicolumn{2}{c}{TF-IDF} & \\
+\cmidrule(lr){2-3} \cmidrule(lr){4-5}
+Dataset & Naive Bayes & SVM & Naive Bayes & SVM & VADER \\
+\midrule
+Yelp & 0.532 & 0.481 & 0.545 & \textbf{0.561} & 0.248 \\
+TE-Irony & 0.635 & 0.624 & 0.630 & \textbf{0.641} & 0.453 \\
+TE-Sentiment & 0.584 & 0.580 & 0.545 & \textbf{0.598} & 0.536 \\
+Twitter & 0.648 & 0.770 & 0.664 & \textbf{0.774} & 0.328 \\
+IMDB & 0.850 & 0.870 & 0.868 & \textbf{0.905} & 0.690 \\
+Fin-50 & 0.712 & 0.745 & 0.717 & \textbf{0.754} & 0.476 \\
+Fin-66 & 0.727 & 0.784 & 0.737 & \textbf{0.786} & 0.504 \\
+Fin-75 & 0.747 & 0.808 & 0.763 & \textbf{0.820} & 0.491 \\
+Fin-All & 0.789 & \textbf{0.880} & 0.792 & 0.876 & 0.423 \\
+\bottomrule
+\end{tabularx}
+\end{table}
