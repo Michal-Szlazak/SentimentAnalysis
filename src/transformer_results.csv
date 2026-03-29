@@ -1,0 +1,15 @@
+Dataset,Model,Accuracy,F1
+tweet_eval_irony,distilbert-base-uncased,0.6572742955721679,0.657260582010582
+tweet_eval_irony,distilroberta-base,0.6837262794709603,0.6817510893898618
+tweet_eval_sentiment,distilbert-base-uncased,0.7020442453094371,0.7037758979932459
+tweet_eval_sentiment,distilroberta-base,0.7052646317558107,0.7091922444568713
+twitter,distilbert-base-uncased,0.8356430340764545,0.8294658741483971
+twitter,distilroberta-base,0.7980183437102497,0.7877513576922972
+finance_50agree,distilbert-base-uncased,0.8515463917525773,0.8406281281980248
+finance_50agree,distilroberta-base,0.8556701030927835,0.8435738282599106
+finance_66agree,distilbert-base-uncased,0.8767772511848341,0.8615872622664321
+finance_66agree,distilroberta-base,0.8803317535545023,0.8692261838688559
+finance_75agree,distilbert-base-uncased,0.934876989869754,0.9110238751147842
+finance_75agree,distilroberta-base,0.9450072358900145,0.9229803363169915
+finance_all_agree,distilbert-base-uncased,0.9403973509933775,0.9154002806438676
+finance_all_agree,distilroberta-base,0.9801324503311258,0.9783205257186891
