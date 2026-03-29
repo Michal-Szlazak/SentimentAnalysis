@@ -5,19 +5,30 @@ Sends batches of texts to Gemini and saves results with sentiment labels.
 
 import json
 import os
+import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 from typing import Optional
 from dotenv import load_dotenv
 from google import genai
-from google.genai.types import Tool
+from google.genai import types
 
 # Load environment variables
 load_dotenv()
 
-# Initialize client
-client = genai.Client()
-MODEL = "gemini-2.5-flash"
+# Initialize Vertex AI Gemini client
+PROJECT_ID = os.getenv("GOOGLE_CLOUD_PROJECT")
+LOCATION = os.getenv("VERTEX_AI_LOCATION", "global")
+MODEL = os.getenv("GEMINI_MODEL", "gemini-2.5-flash")
+
+if not PROJECT_ID:
+    raise ValueError("Missing GOOGLE_CLOUD_PROJECT environment variable for Vertex AI")
+
+client = genai.Client(
+    vertexai=True,
+    project=PROJECT_ID,
+    location=LOCATION,
+)
 
 # Define structured output schema
 SENTIMENT_SCHEMA = {
@@ -61,7 +72,12 @@ def load_dataset(file_path: str) -> list[dict]:
     else:
         raise ValueError(f"Unsupported file format: {file_path}")
 
-def create_batch_prompt(batch: list[dict], start_index: int, instruction: str = None) -> str:
+def create_batch_prompt(
+    batch: list[dict],
+    start_index: int,
+    instruction: str = None,
+    indices: Optional[list[int]] = None,
+) -> str:
     """Create a prompt for batch sentiment classification."""
     if instruction is None:
         instruction = """Analyze the sentiment of the following texts. For each text, assign one of these sentiment labels:
@@ -73,7 +89,8 @@ Return your classification as JSON with the exact structure specified."""
     
     items_text = ""
     for i, item in enumerate(batch):
-        items_text += f"{start_index + i}. {item.get('text', '')}\n\n"
+        item_index = indices[i] if indices is not None else start_index + i
+        items_text += f"{item_index}. {item.get('text', '')}\n\n"
     
     prompt = f"""{instruction}
 
@@ -82,7 +99,12 @@ Texts to analyze:
     
     return prompt
 
-def classify_batch(batch: list[dict], start_index: int = 0, instruction: str = None) -> list[dict]:
+def classify_batch(
+    batch: list[dict],
+    start_index: int = 0,
+    instruction: str = None,
+    indices: Optional[list[int]] = None,
+) -> list[dict]:
     """
     Send a batch of texts to Gemini for sentiment classification.
     
@@ -93,20 +115,27 @@ def classify_batch(batch: list[dict], start_index: int = 0, instruction: str = N
     Returns:
         List of dicts with 'text' and 'sentiment' keys
     """
-    prompt = create_batch_prompt(batch, start_index, instruction)
+    prompt = create_batch_prompt(batch, start_index, instruction, indices)
 
     
     response = client.models.generate_content(
         model=MODEL,
         contents=prompt,
-        config=genai.types.GenerateContentConfig(
+        config=types.GenerateContentConfig(
             response_schema=SENTIMENT_SCHEMA,
             response_mime_type="application/json",
             temperature=0.3,
         )
     )
     
-    result = json.loads(response.text)
+    if getattr(response, "parsed", None):
+        result = response.parsed
+    else:
+        response_text = response.text
+        if response_text is None:
+            raise ValueError("Model returned empty response text")
+        result = json.loads(response_text)
+
     return result["classifications"]
 
 def classify_dataset(
@@ -117,6 +146,8 @@ def classify_dataset(
     max_samples: Optional[int] = None,
     dataset_key: str = None,
     max_workers: int = 1,
+    max_retries: int = 3,
+    retry_base_delay: float = 2.0,
 ):
     instruction = None
     if dataset_key:
@@ -148,8 +179,20 @@ def classify_dataset(
     batch_results = {}
 
     def process_batch(batch_idx, batch):
-        classifications = classify_batch(batch, batch_idx + start_index, instruction)
-        return batch_idx, classifications
+        last_error = None
+        for attempt in range(1, max_retries + 1):
+            try:
+                classifications = classify_batch(batch, batch_idx + start_index, instruction)
+                return batch_idx, classifications
+            except Exception as e:
+                last_error = e
+                if attempt < max_retries:
+                    delay = retry_base_delay * attempt
+                    print(
+                        f"⚠️ Batch {batch_idx // batch_size + 1}/{total_batches} retry {attempt}/{max_retries - 1} in {delay:.1f}s: {e}"
+                    )
+                    time.sleep(delay)
+        raise last_error
 
     with ThreadPoolExecutor(max_workers=max_workers) as executor:
         futures = {
