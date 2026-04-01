@@ -32,3 +32,6 @@
 *.env
 data_cache/
 subsets/
+src/results
+
+results2

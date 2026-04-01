@@ -212,12 +212,12 @@ You are a highly precise Natural Language Processing (NLP) engine. Your task is 
 Yelp Reviews dataset. This dataset consists of reviews for various businesses, including restaurants, hotels, and services. The objective is to predict the star rating based on the text of the review, reflecting the customer's level of satisfaction and overall experience.
 
 #CATEGORY DEFINITIONS
-Labels corresponds to the score associated with the review (between 1 and 5).
-1 - Extreme dissatisfaction (e.g., terrible service, health concerns, or complete failure of expectations).
-2 - Dissatisfaction (e.g., significant flaws, overpriced for the quality, or poor experience despite some minor redeeming qualities).
-3 - Neutral/Mixed (e.g., "okay" experience, average quality, or a mix of strong positives and strong negatives).
-4 - High satisfaction (e.g., great experience, minor room for improvement, or very good value).
-5 - Exceptional experience (e.g., perfect service, outstanding quality, or highly recommended).
+Labels corresponds to the score associated with the review (between 0 and 4).
+0 - Extreme dissatisfaction (e.g., terrible service, health concerns, or complete failure of expectations).
+1 - Dissatisfaction (e.g., significant flaws, overpriced for the quality, or poor experience despite some minor redeeming qualities).
+2 - Neutral/Mixed (e.g., "okay" experience, average quality, or a mix of strong positives and strong negatives).
+3 - High satisfaction (e.g., great experience, minor room for improvement, or very good value).
+4 - Exceptional experience (e.g., perfect service, outstanding quality, or highly recommended).
 
 #FEW-SHOT EXAMPLES
 [

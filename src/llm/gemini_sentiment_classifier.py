@@ -19,7 +19,8 @@ load_dotenv()
 # Initialize Vertex AI Gemini client
 PROJECT_ID = os.getenv("GOOGLE_CLOUD_PROJECT")
 LOCATION = os.getenv("VERTEX_AI_LOCATION", "global")
-MODEL = os.getenv("GEMINI_MODEL", "gemini-2.5-flash")
+MODEL = os.getenv("GEMINI_MODEL", "llama-4-maverick-17b-128e-instruct-maas")
+# MODEL = os.getenv("GEMINI_MODEL", "gemini-2.5-flash")
 
 if not PROJECT_ID:
     raise ValueError("Missing GOOGLE_CLOUD_PROJECT environment variable for Vertex AI")
@@ -117,6 +118,24 @@ def classify_batch(
     """
     prompt = create_batch_prompt(batch, start_index, instruction, indices)
 
+#     SAFETY_SETTINGS = [
+#     types.SafetySetting(
+#         category="HARM_CATEGORY_HATE_SPEECH",
+#         threshold="BLOCK_NONE",
+#     ),
+#     types.SafetySetting(
+#         category="HARM_CATEGORY_HARASSMENT",
+#         threshold="BLOCK_NONE",
+#     ),
+#     types.SafetySetting(
+#         category="HARM_CATEGORY_SEXUALLY_EXPLICIT",
+#         threshold="BLOCK_NONE",
+#     ),
+#     types.SafetySetting(
+#         category="HARM_CATEGORY_DANGEROUS_CONTENT",
+#         threshold="BLOCK_NONE",
+#     ),
+# ]
     
     response = client.models.generate_content(
         model=MODEL,
@@ -127,16 +146,42 @@ def classify_batch(
             temperature=0.3,
         )
     )
+
+    # response = client.models.generate_content(
+    #     model=MODEL,
+    #     contents=prompt,
+    #     config=types.GenerateContentConfig(
+    #         response_schema=SENTIMENT_SCHEMA,
+    #         response_mime_type="application/json",
+    #         temperature=0.3,
+    #         safety_settings=SAFETY_SETTINGS,  # Dodajemy to tutaj
+    #     )
+    # )
     
     if getattr(response, "parsed", None):
         result = response.parsed
     else:
         response_text = response.text
         if response_text is None:
-            raise ValueError("Model returned empty response text")
-        result = json.loads(response_text)
+            print(f"⚠️  DEBUG: Raw response object: {response}")
+            print(f"⚠️  DEBUG: response.text is None, trying response.content...")
+            if hasattr(response, "content") and response.content:
+                response_text = response.content
+            else:
+                raise ValueError(
+                    f"Model returned empty response. Response object: {response}"
+                )
+        try:
+            result = json.loads(response_text)
+        except json.JSONDecodeError as e:
+            print(f"⚠️  DEBUG: Failed to parse JSON: {e}")
+            print(f"⚠️  DEBUG: Response text (first 500 chars): {response_text[:500] if response_text else 'None'}")
+            raise
 
-    return result["classifications"]
+    classifications = result.get("classifications", [])
+    if not classifications:
+        print(f"⚠️  DEBUG: Empty classifications in response. Full result: {result}")
+    return classifications
 
 def classify_dataset(
     input_file: str,
@@ -178,11 +223,25 @@ def classify_dataset(
     total_batches = len(batches)
     batch_results = {}
 
+    def create_404_results(batch_idx, batch):
+        return [
+            {
+                "index": batch_idx + start_index + offset,
+                "text": item.get("text", ""),
+                "sentiment": 404,
+            }
+            for offset, item in enumerate(batch)
+        ]
+
     def process_batch(batch_idx, batch):
         last_error = None
         for attempt in range(1, max_retries + 1):
             try:
                 classifications = classify_batch(batch, batch_idx + start_index, instruction)
+                if len(classifications) != len(batch):
+                    raise ValueError(
+                        f"Expected {len(batch)} classifications, got {len(classifications)}"
+                    )
                 return batch_idx, classifications
             except Exception as e:
                 last_error = e
@@ -196,11 +255,11 @@ def classify_dataset(
 
     with ThreadPoolExecutor(max_workers=max_workers) as executor:
         futures = {
-            executor.submit(process_batch, batch_idx, batch): batch_idx
+            executor.submit(process_batch, batch_idx, batch): (batch_idx, batch)
             for batch_idx, batch in batches
         }
         for future in as_completed(futures):
-            batch_idx = futures[future]
+            batch_idx, batch = futures[future]
             batch_num = batch_idx // batch_size + 1
             try:
                 _, classifications = future.result()
@@ -208,7 +267,8 @@ def classify_dataset(
                 print(f"✅ Batch {batch_num}/{total_batches} completed")
             except Exception as e:
                 print(f"❌ Batch {batch_num}/{total_batches} error: {e}")
-                batch_results[batch_idx] = []
+                batch_results[batch_idx] = create_404_results(batch_idx, batch)
+                print(f"⚠️ Batch {batch_num}/{total_batches} saved with sentiment=404")
 
     with open(output_path, 'w', encoding='utf-8') as fout:
         for batch_idx in sorted(batch_results.keys()):
