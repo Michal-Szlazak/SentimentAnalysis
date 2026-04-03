@@ -17,7 +17,7 @@ from pathlib import Path
 
 
 SUBSETS_DIR = Path(__file__).parent / "subsets"
-RESULTS_DIR = Path(__file__).parent / "results"
+RESULTS_DIR = Path(__file__).parent / "results_mistral" # change it to analyze other model results
 
 DATASET_MAP = {
     "twitter": "twitter_full.jsonl",
@@ -31,7 +31,7 @@ DATASET_MAP = {
     "tweet_eval_irony": "tweet_eval_irony_full.jsonl",
 }
 
-RESULT_SUFFIX = "_gemini_classified_full.jsonl"
+RESULT_SUFFIX = "_mistral_classified_full.jsonl" # change it to analyze other model results (e.g., "_gemini_classified_full.jsonl")
 
 
 def load_ground_truth(path: Path) -> dict[int, dict]:

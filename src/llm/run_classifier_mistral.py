@@ -8,7 +8,9 @@ from pathlib import Path
 
 from gemini_prompts import get_dataset_name
 from mistral_sentiment_classifier import classify_dataset
-from run_classifier import DATASETS, PROMPT_KEYS, RESULTS_DIR, SUBSETS_DIR
+from run_classifier import DATASETS, PROMPT_KEYS, SUBSETS_DIR
+
+DEFAULT_RESULTS_DIR = Path(SUBSETS_DIR).parent / "results_mistral"
 
 
 def get_input_file(dataset_key: str) -> str:
@@ -17,10 +19,10 @@ def get_input_file(dataset_key: str) -> str:
     return str(Path(SUBSETS_DIR) / DATASETS[dataset_key])
 
 
-def get_output_file(dataset_key: str) -> str:
+def get_output_file(dataset_key: str, results_dir: Path) -> str:
     base_name = DATASETS[dataset_key].replace("_test_stratified.jsonl", "_mistral_classified.jsonl")
     base_name = base_name.replace("_full.jsonl", "_mistral_classified_full.jsonl")
-    return str(Path(RESULTS_DIR) / base_name)
+    return str(results_dir / base_name)
 
 
 def list_datasets():
@@ -36,12 +38,16 @@ def list_datasets():
 
 
 def cli_mode(args):
+    results_dir = Path(args.results_dir)
+    results_dir.mkdir(parents=True, exist_ok=True)
+
     input_file = get_input_file(args.dataset)
-    output_file = get_output_file(args.dataset)
+    output_file = get_output_file(args.dataset, results_dir)
     prompt_key = PROMPT_KEYS[args.dataset]
 
     print(f"Dataset: {get_dataset_name(prompt_key)}")
     print(f"Input:   {input_file}")
+    print(f"Results: {results_dir}")
     print(f"Output:  {output_file}")
     print()
 
@@ -61,6 +67,11 @@ def main():
     parser.add_argument("--batch-size", type=int, default=10, help="Texts per API request")
     parser.add_argument("--max-samples", type=int, default=None, help="Maximum texts to process")
     parser.add_argument("--workers", type=int, default=1, help="Parallel API requests")
+    parser.add_argument(
+        "--results-dir",
+        default=str(DEFAULT_RESULTS_DIR),
+        help=f"Output directory (default: {DEFAULT_RESULTS_DIR})",
+    )
     parser.add_argument("--list-datasets", action="store_true", help="List available datasets and exit")
 
     args = parser.parse_args()

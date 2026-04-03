@@ -19,7 +19,7 @@ SUBSETS_DIR = Path(__file__).parent / "subsets"
 
 MODEL_DIR_DEFAULTS = {
     "gemini": Path(__file__).parent / "results_gemini",
-    "llama": Path(__file__).parent / "results_llama",
+    "llama": Path(__file__).parent / "results_llama_reindexed",
     "mistral": Path(__file__).parent / "results_mistral",
     "claude": Path(__file__).parent / "results_claude",
 }
@@ -64,14 +64,22 @@ def load_ground_truth(path: Path) -> dict[int, int]:
     return labels
 
 
-def load_predictions(path: Path) -> dict[int, int]:
-    """Returns {original_index: sentiment} from a classified result file."""
+def load_predictions(path: Path) -> tuple[dict[int, int], int]:
+    """Returns ({original_index: sentiment}, invalid_rows_skipped)."""
     preds = {}
+    invalid_rows = 0
     with open(path, encoding="utf-8") as f:
         for line in f:
             record = json.loads(line)
-            preds[int(record["original_index"])] = int(record["sentiment"])
-    return preds
+            try:
+                idx = int(record["original_index"])
+                sentiment = int(record["sentiment"])
+            except (KeyError, TypeError, ValueError):
+                # Skip malformed rows like sentiment="".
+                invalid_rows += 1
+                continue
+            preds[idx] = sentiment
+    return preds, invalid_rows
 
 
 def evaluate_dataset(dataset_key: str, results_dir: Path, result_suffix: str, f1_avg: str = "both") -> dict:
@@ -84,7 +92,7 @@ def evaluate_dataset(dataset_key: str, results_dir: Path, result_suffix: str, f1
         return {"error": f"Results file not found: {result_file}"}
 
     labels = load_ground_truth(gt_file)
-    preds = load_predictions(result_file)
+    preds, invalid_rows = load_predictions(result_file)
 
     # Align: only evaluate records that appear in both
     blocked = sum(1 for v in preds.values() if v == 404)
@@ -95,6 +103,19 @@ def evaluate_dataset(dataset_key: str, results_dir: Path, result_suffix: str, f1
 
     missing = len(labels) - len(common_indices) - blocked
 
+    if not y_true:
+        return {
+            "dataset": dataset_key,
+            "total_gt": len(labels),
+            "evaluated": 0,
+            "blocked_404": blocked,
+            "missing_predictions": missing,
+            "invalid_rows": invalid_rows,
+            "accuracy": 0.0,
+            "f1_macro": 0.0,
+            "f1_weighted": 0.0,
+        }
+
     acc = accuracy_score(y_true, y_pred)
     unique_labels = sorted(set(y_true))
 
@@ -104,6 +125,7 @@ def evaluate_dataset(dataset_key: str, results_dir: Path, result_suffix: str, f1
         "evaluated": len(common_indices),
         "blocked_404": blocked,
         "missing_predictions": missing,
+        "invalid_rows": invalid_rows,
         "accuracy": acc,
     }
 
@@ -121,7 +143,7 @@ def print_results(results: list[dict], f1_avg: str):
 
     # Header
     col_dataset = 24
-    header = f"{'Dataset':<{col_dataset}}  {'Total':>6}  {'Eval':>6}  {'Blk':>4}  {'Acc':>7}"
+    header = f"{'Dataset':<{col_dataset}}  {'Total':>6}  {'Eval':>6}  {'Blk':>4}  {'Inv':>4}  {'Acc':>7}"
     if has_macro:
         header += f"  {'F1-macro':>9}"
     if has_weighted:
@@ -138,6 +160,7 @@ def print_results(results: list[dict], f1_avg: str):
             f"  {r['total_gt']:>6}"
             f"  {r['evaluated']:>6}"
             f"  {r['blocked_404']:>4}"
+            f"  {r.get('invalid_rows', 0):>4}"
             f"  {r['accuracy']:>7.4f}"
         )
         if has_macro:
@@ -207,7 +230,7 @@ def main():
             if not gt_file.exists() or not result_file.exists():
                 continue
             labels = load_ground_truth(gt_file)
-            preds = load_predictions(result_file)
+            preds, _ = load_predictions(result_file)
             common = sorted(set(labels.keys()) & {k for k, v in preds.items() if v != 404})
             y_true = [labels[i] for i in common]
             y_pred = [preds[i] for i in common]

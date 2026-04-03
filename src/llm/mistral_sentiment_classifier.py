@@ -61,14 +61,18 @@ def create_batch_prompt(
         item_index = indices[i] if indices is not None else start_index + i
         items_text += f"{item_index}. {item.get('text', '')}\n\n"
 
-    json_contract = """
+        json_contract = """
 Return ONLY valid JSON in this exact shape:
 {
-  "classifications": [
-    {"index": 0, "text": "...", "sentiment": 0}
-  ]
+    "classifications": [
+        {"index": 0, "sentiment": 0}
+    ]
 }
-Do not add markdown, comments, or extra keys.
+Rules:
+- Do not return text.
+- index must point to the numbered item above.
+- sentiment must be an integer label.
+- Do not add markdown, comments, or extra keys.
 """
 
     return f"""{instruction}
@@ -258,23 +262,81 @@ def classify_dataset(
     def create_404_results(batch_idx, batch):
         return [
             {
-                "index": batch_idx + start_index + offset,
+                "original_index": batch_idx + start_index + offset,
                 "text": item.get("text", ""),
                 "sentiment": 404,
             }
             for offset, item in enumerate(batch)
         ]
 
+    def to_int(value):
+        if isinstance(value, bool):
+            return None
+        if isinstance(value, int):
+            return value
+        if isinstance(value, str):
+            v = value.strip()
+            if v == "":
+                return None
+            try:
+                return int(v)
+            except ValueError:
+                return None
+        return None
+
+    def build_output_rows(batch_idx, batch, classifications):
+        base_index = batch_idx + start_index
+        expected_indices = [base_index + i for i in range(len(batch))]
+        expected_set = set(expected_indices)
+
+        sentiment_by_index = {}
+        ordered_sentiments = []
+
+        for item in classifications:
+            if not isinstance(item, dict):
+                continue
+
+            sentiment = to_int(item.get("sentiment"))
+            if sentiment is not None:
+                ordered_sentiments.append(sentiment)
+
+            raw_index = to_int(item.get("index"))
+            if raw_index is None or sentiment is None:
+                continue
+
+            # Prefer exact global index; accept local (0..batch-1) as fallback.
+            if raw_index in expected_set:
+                sentiment_by_index[raw_index] = sentiment
+            elif 0 <= raw_index < len(batch):
+                sentiment_by_index[base_index + raw_index] = sentiment
+
+        rows = []
+        for offset, source_item in enumerate(batch):
+            original_index = base_index + offset
+            sentiment = sentiment_by_index.get(original_index)
+            if sentiment is None and offset < len(ordered_sentiments):
+                sentiment = ordered_sentiments[offset]
+            if sentiment is None:
+                sentiment = 404
+
+            rows.append(
+                {
+                    "original_index": original_index,
+                    "text": source_item.get("text", ""),
+                    "sentiment": sentiment,
+                }
+            )
+
+        return rows
+
     def process_batch(batch_idx, batch):
         last_error = None
         for attempt in range(1, max_retries + 1):
             try:
                 classifications = classify_batch(batch, batch_idx + start_index, instruction)
-                if len(classifications) != len(batch):
-                    raise ValueError(
-                        f"Expected {len(batch)} classifications, got {len(classifications)}"
-                    )
-                return batch_idx, classifications
+                if not isinstance(classifications, list):
+                    raise ValueError("Invalid response: classifications is not a list")
+                return batch_idx, build_output_rows(batch_idx, batch, classifications)
             except Exception as e:
                 last_error = e
                 if attempt < max_retries:
@@ -305,11 +367,6 @@ def classify_dataset(
     with open(output_path, "w", encoding="utf-8") as fout:
         for batch_idx in sorted(batch_results.keys()):
             for item in batch_results[batch_idx]:
-                output_line = {
-                    "text": item.get("text", ""),
-                    "sentiment": item.get("sentiment", ""),
-                    "original_index": item.get("index"),
-                }
-                fout.write(json.dumps(output_line, ensure_ascii=False) + "\n")
+                fout.write(json.dumps(item, ensure_ascii=False) + "\n")
 
     print(f"\nClassification complete! Results saved to {output_file}")
