@@ -1,6 +1,5 @@
 import argparse
 import os
-import sys
 
 import pandas as pd
 from datasets import load_dataset
@@ -21,7 +20,7 @@ def main():
 
     print(f"📦 Loading ONLY {args.dataset}... {args.path}")
 
-    # We load ONLY the specific dataset requested
+    # Load dataset
     raw_dataset = {
         args.dataset: load_dataset("szlazakm/SentimentAnalysis", data_files=args.path)
     }
@@ -29,17 +28,35 @@ def main():
     bundle = prepared_datasets[args.dataset]
 
     # Run the analysis
-    result = run_transformer_analysis(args.dataset, bundle, args.model)
+    output = run_transformer_analysis(args.dataset, bundle, args.model)
 
-    # Append result to a CSV (so we don't lose data if a later one fails)
-    results_df = pd.DataFrame([result])
-    results_df.to_csv(
+    # 1. Append summary result to main CSV
+    metrics_df = pd.DataFrame([output["metrics"]])
+    metrics_df.to_csv(
         "transformer_results.csv",
         mode="a",
         index=False,
         header=not os.path.exists("transformer_results.csv"),
     )
-    print(f"✅ Finished {args.model} on {args.dataset}")
+
+    # 2. Generate specific predictions CSV
+    # Clean model name for file path safety
+    safe_model_name = args.model.replace("/", "_")
+    pred_filename = f"{args.dataset}_{safe_model_name}_predictions.csv"
+
+    preds_data = output["predictions"]
+    df_preds = pd.DataFrame(
+        {
+            "rowNumber": range(len(preds_data["predicted_label"])),
+            "predicted_label": preds_data["predicted_label"],
+            "confidence": preds_data["confidence"],
+        }
+    )
+
+    df_preds.to_csv(pred_filename, index=False)
+
+    print(f"✅ Summary saved to transformer_results.csv")
+    print(f"📊 Detailed predictions saved to: {pred_filename}")
 
 
 if __name__ == "__main__":

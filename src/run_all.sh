@@ -3,20 +3,20 @@
 # List of datasets and their paths
 # Format: "name:path"
 DATASETS=(
-    "tweet_eval_irony:TweetEvalIrony/tweeteval_irony.parquet"
-    "tweet_eval_sentiment:TweetEvalSentiment/tweeteval_sentiment.parquet"
+    # "tweet_eval_irony:TweetEvalIrony/tweeteval_irony.parquet"
+    # "tweet_eval_sentiment:TweetEvalSentiment/tweeteval_sentiment.parquet"
     "twitter:Twitter/twitter.parquet"
     "imdb:IMDB/imdb.parquet"
-    "yelp_test:Yelp/yelp_test.parquet"
-    "yelp_train:Yelp/yelp_train.parquet"
-    "finance_50agree:FinancialPhraseBank/financial_phrasebank_50Agree.parquet"
-    "finance_66agree:FinancialPhraseBank/financial_phrasebank_66Agree.parquet"
-    "finance_75agree:FinancialPhraseBank/financial_phrasebank_75Agree.parquet"
-    "finance_all_agree:FinancialPhraseBank/financial_phrasebank_AllAgree.parquet"
+    # "yelp_test:Yelp/yelp_test.parquet"
+    # "yelp_train:Yelp/yelp_train.parquet"
+    # "finance_50agree:FinancialPhraseBank/financial_phrasebank_50Agree.parquet"
+    # "finance_66agree:FinancialPhraseBank/financial_phrasebank_66Agree.parquet"
+    # "finance_75agree:FinancialPhraseBank/financial_phrasebank_75Agree.parquet"
+    # "finance_all_agree:FinancialPhraseBank/financial_phrasebank_AllAgree.parquet"
 )
 
 # List of models
-MODELS=("distilbert-base-uncased" "distilroberta-base")
+MODELS=("distilroberta-base" "distilbert-base-uncased")
 
 for ds_info in "${DATASETS[@]}"; do
     IFS=":" read -r NAME DS_PATH <<< "$ds_info"

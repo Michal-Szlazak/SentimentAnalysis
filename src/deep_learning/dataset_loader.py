@@ -8,7 +8,7 @@ def prepare_datasets(datasets_dict):
     le = LabelEncoder()
 
     # Yelp handling logic
-    if "yelp_train" in datasets_dict and "yelp_test" in datasets_dict:
+    if "yelp_test" in datasets_dict:
         df_train = pd.DataFrame(datasets_dict["yelp_train"]["train"])
         df_test = pd.DataFrame(datasets_dict["yelp_test"]["train"])
 

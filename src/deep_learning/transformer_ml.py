@@ -3,6 +3,7 @@ import os
 import evaluate
 import numpy as np
 import torch
+import torch.nn.functional as F
 from datasets import Dataset
 from transformers import (
     AutoModelForSequenceClassification,
@@ -66,7 +67,7 @@ def run_transformer_analysis(
             )["f1"],
         }
 
-    # 6. Minimal Training Args for maximum compatibility
+    # 6. Minimal Training Args
     training_args = TrainingArguments(
         output_dir=f"./results/{name}",
         eval_strategy="epoch",
@@ -82,24 +83,39 @@ def run_transformer_analysis(
         dataloader_pin_memory=False,
     )
 
-    # 7. Trainer - Changed 'tokenizer' to 'processing_class'
+    # 7. Trainer
     trainer = Trainer(
         model=model,
         args=training_args,
         train_dataset=tokenized_train,
         eval_dataset=tokenized_test,
-        # In latest transformers, use processing_class instead of tokenizer
         processing_class=tokenizer,
         data_collator=DataCollatorWithPadding(tokenizer=tokenizer),
         compute_metrics=compute_metrics,
     )
 
     trainer.train()
+
+    # --- Prediction logic for CSV output ---
+    print(f"Generating predictions for {name}...")
+    prediction_output = trainer.predict(tokenized_test)
+
+    # Calculate Softmax to get confidence scores
+    logits = torch.from_numpy(prediction_output.predictions)
+    probabilities = F.softmax(logits, dim=-1)
+    confidences, predictions = torch.max(probabilities, dim=-1)
+
     eval_results = trainer.evaluate()
 
     return {
-        "Dataset": name,
-        "Model": model_checkpoint,
-        "Accuracy": eval_results["eval_Accuracy"],
-        "F1": eval_results["eval_F1"],
+        "metrics": {
+            "Dataset": name,
+            "Model": model_checkpoint,
+            "Accuracy": eval_results["eval_Accuracy"],
+            "F1": eval_results["eval_F1"],
+        },
+        "predictions": {
+            "predicted_label": predictions.tolist(),
+            "confidence": confidences.tolist(),
+        },
     }

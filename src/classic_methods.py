@@ -1,9 +1,9 @@
 import pandas as pd
+from datasets import load_dataset
 
-from utils.dataset_loader import prepare_datasets
 from classic.dictionary import run_dictionary_analysis
 from classic.traditional_ml import run_traditional_ml
-from datasets import load_dataset
+from utils.dataset_loader import prepare_datasets
 
 files = {
     "tweet_eval_irony": "TweetEvalIrony/tweeteval_irony.parquet",
@@ -15,19 +15,21 @@ files = {
     "finance_50agree": "FinancialPhraseBank/financial_phrasebank_50Agree.parquet",
     "finance_66agree": "FinancialPhraseBank/financial_phrasebank_66Agree.parquet",
     "finance_75agree": "FinancialPhraseBank/financial_phrasebank_75Agree.parquet",
-    "finance_all_agree": "FinancialPhraseBank/financial_phrasebank_AllAgree.parquet"
+    "finance_all_agree": "FinancialPhraseBank/financial_phrasebank_AllAgree.parquet",
 }
 
 from concurrent.futures import ProcessPoolExecutor, as_completed
 
+
 def process_dataset(args):
     name, data_bundle = args
-    
+
     results = []
     results += run_traditional_ml(name, data_bundle)
     results += run_dictionary_analysis(name, data_bundle)
-    
+
     return results
+
 
 if __name__ == "__main__":
     # Load datasets
