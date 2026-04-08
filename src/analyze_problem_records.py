@@ -2,12 +2,12 @@
 Analyze problematic records in sentiment result files.
 
 This script compares *_full.jsonl ground truth files with
-*_gemini_classified_full.jsonl prediction files and reports:
+*_classified_full.jsonl prediction files and reports:
 - missing predictions
 - blocked predictions (sentiment == 404)
 - duplicate original_index values
 - out-of-range indices
-- invalid original_index rows
+- invalid prediction rows (unparseable original_index/sentiment)
 """
 
 import json
@@ -17,7 +17,7 @@ from pathlib import Path
 
 
 SUBSETS_DIR = Path(__file__).parent / "subsets"
-RESULTS_DIR = Path(__file__).parent / "results_mistral" # change it to analyze other model results
+RESULTS_DIR = Path(__file__).parent / "results_gemini_reindexed" # change it to analyze other model results
 
 DATASET_MAP = {
     "twitter": "twitter_full.jsonl",
@@ -31,7 +31,7 @@ DATASET_MAP = {
     "tweet_eval_irony": "tweet_eval_irony_full.jsonl",
 }
 
-RESULT_SUFFIX = "_mistral_classified_full.jsonl" # change it to analyze other model results (e.g., "_gemini_classified_full.jsonl")
+RESULT_SUFFIX = "_gemini_classified_full.jsonl" # change it to analyze other model results (e.g., "_gemini_classified_full.jsonl")
 
 
 def load_ground_truth(path: Path) -> dict[int, dict]:
@@ -72,13 +72,19 @@ def analyze_dataset(dataset_key: str, max_examples: int = 20) -> dict:
     pred_rows = load_predictions_raw(pred_file)
 
     pred_by_index = defaultdict(list)
-    invalid_index_rows = []
+    invalid_rows = []
     for row in pred_rows:
-        idx = row["original_index"]
-        if not isinstance(idx, int):
-            invalid_index_rows.append(row)
+        try:
+            idx = int(row["original_index"])
+            sentiment = int(row["sentiment"])
+        except (KeyError, TypeError, ValueError):
+            invalid_rows.append(row)
             continue
-        pred_by_index[idx].append(row)
+
+        normalized_row = dict(row)
+        normalized_row["original_index"] = idx
+        normalized_row["sentiment"] = sentiment
+        pred_by_index[idx].append(normalized_row)
 
     gt_indices = set(gt.keys())
     pred_indices = set(pred_by_index.keys())
@@ -139,6 +145,17 @@ def analyze_dataset(dataset_key: str, max_examples: int = 20) -> dict:
             }
         )
 
+    invalid_preview = []
+    for row in invalid_rows[:max_examples]:
+        invalid_preview.append(
+            {
+                "line_no": row.get("line_no"),
+                "original_index": row.get("original_index"),
+                "sentiment": row.get("sentiment"),
+                "text": row.get("text", "")[:200],
+            }
+        )
+
     return {
         "dataset": dataset_key,
         "total_gt": len(gt_indices),
@@ -150,12 +167,13 @@ def analyze_dataset(dataset_key: str, max_examples: int = 20) -> dict:
         "missing_eval_count": len(missing_eval_indices),
         "duplicate_index_count": len(duplicate_indices),
         "out_of_range_count": len(out_of_range),
-        "invalid_index_rows_count": len(invalid_index_rows),
+        "invalid_rows_count": len(invalid_rows),
         "missing_pred_examples": gt_preview(missing_indices),
         "missing_eval_examples": gt_preview(missing_eval_indices),
         "blocked_404_examples": blocked_preview,
         "duplicate_examples": duplicate_preview,
         "out_of_range_examples": out_of_range[:max_examples],
+        "invalid_rows_examples": invalid_preview,
     }
 
 
@@ -202,7 +220,7 @@ def main() -> None:
             f"Unique idx={report['unique_pred_indices']} | Eval={report['evaluated_count']} | "
             f"404={report['blocked_404_count']} | MissingPred={report['missing_pred_count']} | "
             f"DupIdx={report['duplicate_index_count']} | OutOfRange={report['out_of_range_count']} | "
-            f"InvalidIdxRows={report['invalid_index_rows_count']}"
+            f"InvalidRows={report['invalid_rows_count']}"
         )
 
         if report["missing_pred_examples"]:
@@ -226,6 +244,14 @@ def main() -> None:
         if report["out_of_range_examples"]:
             print("\nOut-of-range indices:")
             print(report["out_of_range_examples"])
+
+        if report["invalid_rows_examples"]:
+            print("\nInvalid prediction rows (parse errors):")
+            for x in report["invalid_rows_examples"]:
+                print(
+                    f"- line={x['line_no']} original_index={x['original_index']} "
+                    f"sentiment={x['sentiment']} text={x['text']}"
+                )
 
     if args.json_out:
         out_path = Path(args.json_out)

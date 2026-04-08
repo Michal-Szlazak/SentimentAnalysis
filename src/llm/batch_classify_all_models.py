@@ -58,7 +58,7 @@ DEFAULT_BATCH_SIZES = {
 
 # Keep model outputs separated to avoid overwriting and simplify evaluation.
 MODEL_RESULTS_DIRS = {
-    "gemini": Path(SUBSETS_DIR).parent / "results_gemini",
+    "gemini": Path(SUBSETS_DIR).parent / "results_gemini2",
     "llama": Path(SUBSETS_DIR).parent / "results_llama",
     "mistral": Path(SUBSETS_DIR).parent / "results_mistral",
 }

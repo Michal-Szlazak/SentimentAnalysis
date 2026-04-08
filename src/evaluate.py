@@ -7,6 +7,12 @@ Usage:
     python evaluate.py --model llama    # evaluate llama outputs
     python evaluate.py --results-dir c:/path/to/results_folder
     python evaluate.py --f1 macro       # choose F1 averaging: macro | weighted | both (default: both)
+
+Practical usage:
+
+py .\evaluate.py --model llama --results-dir results_llama_reindexed  # specify model and results dir, model name have an impact on expected file name format when reading results files
+
+
 """
 
 import json
@@ -18,10 +24,11 @@ from sklearn.metrics import f1_score, accuracy_score, classification_report
 SUBSETS_DIR = Path(__file__).parent / "subsets"
 
 MODEL_DIR_DEFAULTS = {
-    "gemini": Path(__file__).parent / "results_gemini",
+    "gemini": Path(__file__).parent / "results_gemini_reindexed",
     "llama": Path(__file__).parent / "results_llama_reindexed",
     "mistral": Path(__file__).parent / "results_mistral",
     "claude": Path(__file__).parent / "results_claude",
+    "voting": Path(__file__).parent / "results_voting",
 }
 
 # Map: stem of result file (before "_gemini_classified_full") -> ground truth file
@@ -51,6 +58,8 @@ def resolve_results_dir(model: str, custom_dir: str | None) -> Path:
 
 
 def get_result_suffix(model: str) -> str:
+    if model == "voting":
+        return "_voting_classified_full.jsonl"
     return f"_{model}_classified_full.jsonl"
 
 
@@ -170,6 +179,117 @@ def print_results(results: list[dict], f1_avg: str):
         print(row)
 
 
+def print_summary(results: list[dict], f1_avg: str):
+    has_macro = f1_avg in ("macro", "both")
+    has_weighted = f1_avg in ("weighted", "both")
+
+    valid = [r for r in results if "error" not in r]
+    if not valid:
+        return
+
+    total_gt = sum(r["total_gt"] for r in valid)
+    total_eval = sum(r["evaluated"] for r in valid)
+    total_blocked = sum(r.get("blocked_404", 0) for r in valid)
+    total_invalid = sum(r.get("invalid_rows", 0) for r in valid)
+    total_missing = sum(r.get("missing_predictions", 0) for r in valid)
+
+    if total_eval > 0:
+        weighted_acc = sum(r["accuracy"] * r["evaluated"] for r in valid) / total_eval
+    else:
+        weighted_acc = 0.0
+
+    print("\n" + "=" * 90)
+    print("SUMMARY")
+    print(
+        f"Datasets={len(valid)} | Total={total_gt} | Eval={total_eval} | "
+        f"Blk={total_blocked} | Inv={total_invalid} | Missing={total_missing} | "
+        f"Acc(weighted)={weighted_acc:.4f}"
+    )
+
+    if has_macro:
+        macro_vals = [r["f1_macro"] for r in valid if "f1_macro" in r]
+        if macro_vals:
+            print(f"F1-macro(mean over datasets)={sum(macro_vals)/len(macro_vals):.4f}")
+
+    if has_weighted:
+        weighted_vals = [r["f1_weighted"] for r in valid if "f1_weighted" in r]
+        if weighted_vals:
+            print(f"F1-weighted(mean over datasets)={sum(weighted_vals)/len(weighted_vals):.4f}")
+
+
+def write_excel_report(
+    results: list[dict],
+    output_path: Path,
+    model: str,
+    results_dir: Path,
+    f1_avg: str,
+) -> None:
+    try:
+        import pandas as pd
+    except ImportError as exc:
+        raise SystemExit(
+            "Excel export requires pandas. Install dependencies from requirements.txt first."
+        ) from exc
+
+    try:
+        from openpyxl.styles import Font
+        from openpyxl.utils import get_column_letter
+    except ImportError as exc:
+        raise SystemExit(
+            "Excel export requires openpyxl. Install dependencies from requirements.txt first."
+        ) from exc
+
+    column_order = [
+        "dataset",
+        "total_gt",
+        "evaluated",
+        "blocked_404",
+        "missing_predictions",
+        "invalid_rows",
+        "accuracy",
+        "f1_macro",
+        "f1_weighted",
+        "error",
+    ]
+
+    normalized_rows = []
+    for row in results:
+        normalized = {key: row.get(key) for key in column_order}
+        normalized_rows.append(normalized)
+
+    df = pd.DataFrame(normalized_rows)
+    df = df[[col for col in column_order if col in df.columns]]
+
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    with pd.ExcelWriter(output_path, engine="openpyxl") as writer:
+        df.to_excel(writer, sheet_name="results", index=False)
+
+        workbook = writer.book
+        worksheet = writer.sheets["results"]
+
+        worksheet.freeze_panes = "A2"
+        worksheet.auto_filter.ref = worksheet.dimensions
+
+        for cell in worksheet[1]:
+            cell.font = Font(bold=True)
+
+        for idx, column_name in enumerate(df.columns, start=1):
+            values = [str(column_name)]
+            values.extend("" if value is None else str(value) for value in df[column_name].tolist())
+            width = min(max(len(value) for value in values) + 2, 40)
+            worksheet.column_dimensions[get_column_letter(idx)].width = width
+
+        meta = workbook.create_sheet("meta")
+        meta["A1"] = "model"
+        meta["B1"] = model
+        meta["A2"] = "results_dir"
+        meta["B2"] = str(results_dir)
+        meta["A3"] = "f1_avg"
+        meta["B3"] = f1_avg
+        meta["A4"] = "rows"
+        meta["B4"] = len(results)
+
+
 def main():
     parser = argparse.ArgumentParser(description="Evaluate sentiment classification results.")
     parser.add_argument(
@@ -192,7 +312,7 @@ def main():
     )
     parser.add_argument(
         "--model",
-        choices=["gemini", "llama", "mistral", "claude"],
+        choices=["gemini", "llama", "mistral", "claude", "voting"],
         default="gemini",
         help="Model output format to evaluate (default: gemini)",
     )
@@ -203,6 +323,11 @@ def main():
             "Path to folder with result files. "
             "If omitted, defaults to model-specific folder (e.g. src/results_llama)."
         ),
+    )
+    parser.add_argument(
+        "--excel-out",
+        default=None,
+        help="Optional .xlsx output path for the summary table.",
     )
     args = parser.parse_args()
 
@@ -222,6 +347,12 @@ def main():
         results.append(r)
 
     print_results(results, args.f1_avg)
+    print_summary(results, args.f1_avg)
+
+    if args.excel_out:
+        excel_path = Path(args.excel_out)
+        write_excel_report(results, excel_path, args.model, results_dir, args.f1_avg)
+        print(f"Excel report saved to: {excel_path}")
 
     if args.report:
         for key in args.datasets:

@@ -79,15 +79,26 @@ Texts to analyze:
 {items_text}"""
 
 
+def _fix_invalid_escapes(s: str) -> str:
+    """Replace backslashes not followed by a valid JSON escape character."""
+    return re.sub(r'\\(?!["\\\x2F bfnrtu])', r'\\\\', s)
+
+
 def _extract_json_object(text: str) -> dict:
     cleaned = text.strip()
 
     if cleaned.startswith("```"):
-        cleaned = re.sub(r"^```(?:json)?\\s*", "", cleaned)
-        cleaned = re.sub(r"\\s*```$", "", cleaned)
+        cleaned = re.sub(r"^```(?:json)?\s*", "", cleaned)
+        cleaned = re.sub(r"\s*```$", "", cleaned)
 
     try:
         return json.loads(cleaned)
+    except json.JSONDecodeError:
+        pass
+
+    # Try fixing invalid escape sequences and parse again.
+    try:
+        return json.loads(_fix_invalid_escapes(cleaned))
     except json.JSONDecodeError:
         pass
 
@@ -95,7 +106,11 @@ def _extract_json_object(text: str) -> dict:
     if not match:
         raise ValueError("No JSON object found in model response")
 
-    return json.loads(match.group(0))
+    candidate = match.group(0)
+    try:
+        return json.loads(candidate)
+    except json.JSONDecodeError:
+        return json.loads(_fix_invalid_escapes(candidate))
 
 
 def _get_access_token() -> str:

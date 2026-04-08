@@ -34,7 +34,7 @@ DATASETS = {
 }
 
 SUBSETS_DIR = r"c:\Users\bushi\Documents\GitHub\SentimentAnalysis\src\subsets"
-RESULTS_DIR = r"c:\Users\bushi\Documents\GitHub\SentimentAnalysis\src\results2"
+RESULTS_DIR = r"c:\Users\bushi\Documents\GitHub\SentimentAnalysis\src\gemini_misssing_results"
 
 # Maps every dataset key (incl. _full variants) to its prompt key in gemini_prompts.PROMPTS
 PROMPT_KEYS = {
