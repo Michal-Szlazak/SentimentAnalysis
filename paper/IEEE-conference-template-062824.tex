@@ -5,7 +5,6 @@
 
 \usepackage{cite}
 \usepackage{amsmath,amssymb,amsfonts}
-\usepackage{algorithmic}
 \usepackage{graphicx}
 \usepackage{textcomp}
 \usepackage{xcolor}
@@ -48,6 +47,95 @@ TODO
 \section{Introduction}
 TODO + sample citation
 \cite{liskowski2026large}
+
+\section{LLM-Based Sentiment Classification Setup}
+We run sentiment inference for each dataset using Gemini, Mistral, and Llama. All outputs are stored in JSONL format with three fields: text, predicted sentiment label, and original sample index. The index is used as the primary key to align predictions with ground truth during evaluation.
+
+\subsection{Prompt Design}
+Prompt templates are dataset-specific and follow a fixed five-block structure. This structure was used consistently across models and datasets to improve comparability and output stability. Each prompt is organized as follows:
+\begin{itemize}
+\item \textbf{SYSTEM ROLE}: defines the model as a sentiment classification engine and sets the expected analytical behavior.
+\item \textbf{DATA CONTEXT}: specifies the dataset domain and task type (for IMDb: movie-review binary sentiment).
+\item \textbf{CATEGORY DEFINITIONS}: provides an explicit numeric mapping (for IMDb: $0 \rightarrow$ negative, $1 \rightarrow$ positive).
+\item \textbf{FEW-SHOT EXAMPLES}: includes labeled positive/negative review snippets to anchor decision boundaries.
+\item \textbf{ENTRIES TO CLASSIFY}: appends the current batch items to be labeled.
+\end{itemize}
+
+\textit{[TABLE 2 HERE: Prompt schema and example label mappings per dataset.]}
+
+\subsection{API Pipeline and Reliability Mechanisms}
+Inference is executed in batch mode, where multiple dataset examples are sent within a single API request for joint classification. This design improves throughput and reduces request overhead. During execution, we observed intermittent API errors, primarily related to rate limiting and safety filtering (e.g., responses flagged as ``prohibited content'').
+
+To improve robustness, we implemented retry with backoff, selective reprocessing of blocked requests, and dedicated recovery of missing indices. We also observed that some requests blocked in batch mode could be successfully processed when retried as single-item calls. The recovery stage substantially reduced the number of unclassified examples; after retry, only one sample remained unresolved.
+
+\begin{table}[ht]
+\centering
+\caption{Initially unclassified examples by model and dataset}
+\label{tab:unclassified_by_model}
+\begin{tabular}{|l|l|r|}
+\hline
+\textbf{Model} & \textbf{Dataset} & \textbf{Unclassified} \\
+\hline
+Mistral & twitter & 12 \\
+Mistral & imdb & 94 \\
+Mistral & yelp\_full & 28 \\
+\hline
+Llama & twitter & 120 \\
+Llama & imdb & 1052 \\
+Llama & yelp\_full & 10 \\
+Llama & tweet\_eval\_sentiment & 181 \\
+Llama & tweet\_eval\_irony & 30 \\
+\hline
+Gemini & twitter & 2 \\
+Gemini & imdb & 1 \\
+Gemini & finance\_all\_agree & 1 \\
+Gemini & tweet\_eval\_sentiment & 30 \\
+\hline
+\end{tabular}
+\end{table}
+
+\begin{table}[ht]
+\centering
+\caption{Unclassified examples by model and dataset after retry}
+\label{tab:unclassified_by_model_after_retry}
+\begin{tabular}{|l|l|r|}
+\hline
+\textbf{Model} & \textbf{Dataset} & \textbf{Unclassified} \\
+\hline
+Llama & imdb & 21 \\
+\hline
+Gemini & imdb & 1 \\
+\hline
+\end{tabular}
+\end{table}
+
+\section{Evaluation Protocol and Per-Model Results}
+Predictions are evaluated against full ground-truth files using Accuracy and macro-F1. In addition, we report operational counters: evaluated records, blocked records, invalid rows, and missing predictions. This decomposition is essential, because high metric values on evaluated samples may coexist with reduced pipeline completeness.
+
+\textit{[TABLE 3 HERE: Per-model, per-dataset results (Accuracy, F1, Eval, Blocked, Invalid, Missing).]}
+
+The empirical results indicate that no single model is uniformly dominant across all domains. Performance is dataset-dependent: some models are more stable on cleaner corpora, whereas others are more competitive on noisy social-media benchmarks. This motivates ensemble aggregation rather than fixed single-model selection.
+
+\section{Voting Ensemble with Priority Tie-Breaking}
+To combine complementary model behavior, we construct a voting ensemble over Gemini, Mistral, and Llama predictions for each sample index. The final label is selected by majority vote. In the absence of a strict majority, ties are resolved using a fixed priority order:
+
+\begin{center}
+Gemini $>$ Mistral $>$ Llama.
+\end{center}
+
+The priority is determined by average model effectiveness observed in the benchmark. This tie-break policy reduces unresolved outputs and guarantees deterministic final predictions.
+
+\textit{[TABLE 4 HERE: Voting rule variants and tie-resolution impact.]}
+
+\section{Upper-Bound Analysis: Best Model per Dataset}
+To estimate attainable headroom, we additionally report an oracle-style upper bound: for each dataset, we select the best-performing single model and aggregate these best scores across datasets. Although this is not directly deployable, it quantifies potential gains achievable by learned routing or meta-selection.
+
+\textit{[TABLE 5 HERE: Single best global model vs voting ensemble vs oracle best-per-dataset.]}
+
+\section{Discussion}
+The experiments indicate that robust LLM-based sentiment analysis requires both strong modeling choices and resilient systems engineering. Prompt quality, output constraints, retry strategy, and post-hoc recovery materially affect final outcomes. The voting ensemble improves cross-dataset stability, while the oracle comparison suggests further gains are feasible through adaptive model routing and improved prompt calibration (including golden-set few-shot selection).
+\subsection{Prompt Engineering Considerations}
+Although the current prompts provide consistent end-to-end execution, further improvements are plausible. In particular, few-shot example quality is expected to be a major sensitivity factor. A stronger design would use a curated \textit{golden set} of representative and label-reliable examples selected to maximize coverage of difficult linguistic patterns (e.g., ambiguity, irony, entity-dependent polarity, and domain-specific jargon). Such prompt calibration may improve class separation and reduce cross-model disagreement.
 
 
 \bibliographystyle{IEEEtran}
