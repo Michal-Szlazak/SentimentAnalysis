@@ -52,26 +52,35 @@ TODO + sample citation
 \cite{liskowski2026large}
 
 \section{LLM-Based Sentiment Classification Setup}
-We run sentiment inference for each dataset using Gemini, Mistral, and Llama. All outputs are stored in JSONL format with three fields: text, predicted sentiment label, and original sample index. The index is used as the primary key to align predictions with ground truth during evaluation.
-
-\subsection{Prompt Design}
-Prompt templates are dataset-specific and follow a fixed five-block structure.
-The same structure is used across all models and datasets to improve comparability and output stability.
-Each prompt is organized as follows:
+The inference pipeline was designed to evaluate the capabilities of state-of-the-art LLMs in a controlled, reproducible environment. All models were accessed through the \textbf{Google Cloud Vertex AI API}, which provided a unified infrastructure for request management and model serving. We utilized three distinct architectures:
 \begin{itemize}
-\item \textbf{SYSTEM ROLE}: defines the model as a sentiment classification engine and sets the expected analytical behavior.
-\item \textbf{DATA CONTEXT}: specifies the dataset domain and task type.
-\item \textbf{CATEGORY DEFINITIONS}: provides an explicit numeric mapping.
-\item \textbf{FEW-SHOT EXAMPLES}: includes labeled positive/negative review snippets to anchor decision boundaries.
-\item \textbf{ENTRIES TO CLASSIFY}: appends the current batch items to be labeled.
+    \item \textbf{Gemini}: gemini-2.5-flash
+    \item \textbf{Mistral}: mistral-small-2503
+    \item \textbf{Llama}: llama-4-maverick-17b-128e-instruct-maas
 \end{itemize}
 
-\subsection{API Pipeline and Reliability Mechanisms}
-Inference is executed in batch mode, where multiple dataset examples are sent within a single API request for joint classification. This design improves throughput and reduces request overhead. During execution, we observed intermittent API errors, primarily related to rate limiting and safety filtering (e.g., responses flagged as ``prohibited content'').
+The classification process was orchestrated via a Python-based integration layer, capturing outputs in structured JSONL format to ensure data integrity and facilitate precise alignment with ground-truth labels through unique sample indices.
+\subsection{Prompt Engineering and In-Context Learning}
+To minimize variance across model responses, we employed a standardized, five-block prompt architecture. This structure leverages In-Context Learning (ICL) principles to provide the models with both semantic boundaries and formatting constraints:
+\begin{itemize}
+\item \textbf{System Role}: Establishes the persona of a domain-expert sentiment classifier, optimizing the model's internal attention mechanisms for the task.
+\item \textbf{Data Context}: Mitigates domain-shift issues by specifying the source of the text (np. financial reports vs. social media).
+\item \textbf{Category Definitions}: Provides a rigid mapping of labels to numeric or categorical values, reducing lexical ambiguity.
+\item \textbf{Few-Shot Examples}: Serves as a calibration mechanism. By including curated positive and negative snippets, we anchor the decision boundary, which is particularly critical for noisy datasets like Twitter.
+\item \textbf{Target Input}: Appends the batch of records for inference, utilizing a clear separator to prevent prompt injection or context leakage.
+\end{itemize}
 
-To improve robustness, we implemented retry with backoff, selective reprocessing of blocked requests, and dedicated recovery of missing indices. We also observed that some requests blocked in batch mode could be successfully processed when retried as single-item calls. The recovery stage substantially reduced the number of unclassified examples; after retry, only one sample remained unresolved.
+\vspace{-0.6em}
 
-\begin{table}[ht]
+\subsection{Pipeline Resilience and Error Handling}
+Large-scale API-based inference introduces challenges regarding rate limits and safety-alignment triggers. During the initial pass, we observed a non-negligible rate of unclassified examples (Table~\ref{tab:unclassified_by_model}), primarily due to:
+\begin{enumerate}
+    \item \textbf{Rate Limiting}: Exceeding tokens-per-minute (TPM) or requests-per-minute (RPM) quotas.
+    \item \textbf{Content Filtering}: False positives in safety filters where benign text (e.g., intense movie reviews on IMDb) was flagged as prohibited content.
+\end{enumerate}
+
+To ensure a complete dataset for benchmarking, we implemented a multi-stage recovery framework. This included an exponential backoff strategy for rate limits and a secondary "atomic-retry" pass for samples that failed within batches (re-submitting blocked batch-items as individual requests). As shown in Table~\ref{tab:unclassified_by_model_after_retry}, this methodology reduced the missing data to a statistically insignificant level (near-zero loss).
+\begin{table}[H]
 \centering
 \caption{Initially unclassified examples by model and dataset}
 \label{tab:unclassified_by_model}
@@ -97,7 +106,7 @@ Gemini & tweet\_eval\_sentiment & 30 \\
 \end{tabular}
 \end{table}
 
-\begin{table}[ht]
+\begin{table}[H]
 \centering
 \caption{Unclassified examples by model and dataset after retry}
 \label{tab:unclassified_by_model_after_retry}
@@ -112,14 +121,16 @@ Gemini & imdb & 1 \\
 \end{tabular}
 \end{table}
 
-\section{Evaluation Protocol and Per-Model Results}
-Predictions are evaluated against full ground-truth files using Accuracy and macro-F1.
+Problems with content filtering aligns with observations documented in other researches \cite{sa-in-age-of-genai}, where was also noted that generative models, especially from the Llama family, sometimes refuse to process prompts containing profanity or intense emotional language, even when such content is essential for sentiment analysis in user-generated reviews.
 
-\begin{table*}[t]
+\section{Evaluation and Comparative Analysis}
+The models were evaluated using Accuracy and Macro-averaged F1-score to account for potential class imbalances across the multidomain datasets.
+\begin{table}[H]
 \centering
 \scriptsize
 \caption{Per-dataset performance of Gemini, Mistral, and Llama (Accuracy and Macro-F1).}
 \label{tab:llm_results_main}
+\resizebox{\columnwidth}{!}{%
 \begin{tabular}{|l|cc|cc|cc|}
 \hline
 \textbf{Dataset} & \multicolumn{2}{c|}{\textbf{Gemini}} & \multicolumn{2}{c|}{\textbf{Mistral}} & \multicolumn{2}{c|}{\textbf{Llama}} \\
@@ -136,19 +147,23 @@ tweet\_eval\_sentiment & \best{0.683} & \best{0.688} & 0.676 & 0.679 & 0.658 & 0
 tweet\_eval\_irony   & \best{0.809} & \best{0.807} & 0.731 & 0.731 & 0.786 & 0.784 \\
 \hline
 \end{tabular}
-\end{table*}
+}
+\end{table}
 
-The empirical results indicate that no single model is uniformly dominant across all domains. Performance is dataset-dependent: some models are more stable on cleaner corpora, whereas others are more competitive on noisy social-media benchmarks. This motivates ensemble aggregation rather than fixed single-model selection.
+The empirical results indicate that no single model is uniformly dominant across all domains. Performance is dataset-dependent: some models are more stable on cleaner corpora, whereas others are more competitive on noisy social-media benchmarks.
 
-\section{Voting Ensemble with Priority Tie-Breaking}
-To combine complementary model behavior, we construct a voting ensemble over Gemini, Mistral, and Llama predictions for each sample index. The final label is selected by majority vote. In the absence of a strict majority, ties are resolved using a fixed priority order:
+\section{Multi-Model Voting and Tie-Breaking Strategy}
+To improve the stability of our classifications, we combined the predictions from all three models (Gemini, Llama and Mistral) using a majority voting logic. For every text sample, the final label was chosen based on the most frequent prediction among the models.
 
-\begin{center}
-Gemini $>$ Llama $>$ Mistral
-\end{center}
+This approach is inspired by the multi-agent negotiation frameworks proposed in literature \cite{sun2023sentiment}, where multiple LLM outputs are generated through role-flipped negotiations and a final sentiment polarity is determined by selecting the most frequent decision.
 
-The priority is determined by average model effectiveness observed in the benchmark. This tie-break policy reduces unresolved outputs and guarantees deterministic final predictions.
-
+In cases where all three models provided different labels (a total disagreement), we applied a fixed priority rule to resolve the tie. The priority was based on the overall performance of the models during our tests:
+\begin{enumerate}
+    \item \textbf{Gemini} (Highest priority)
+    \item \textbf{Llama}
+    \item \textbf{Mistral}
+\end{enumerate}
+This ensures that whenever a consensus is not reached, the system relies on the prediction from the model that proved most reliable across the majority of our datasets.
 \begin{table}[H]
 \centering
 \footnotesize
@@ -177,11 +192,10 @@ As shown in Table~\ref{tab:voting_vs_best_llm}, voting is competitive with the b
 In particular, both Accuracy and macro-F1 improve on Finance-66Agree, Finance-75Agree, Finance-All-Agree, and TweetEval-Sentiment.
 At the same time, voting underperforms the best single model on Twitter, Yelp-Full, and TweetEval-Irony, indicating that aggregation benefits are dataset-dependent.
 
-\section{Discussion}
-The experiments indicate that robust LLM-based sentiment analysis requires both strong modeling choices and resilient systems engineering. Prompt quality, output constraints, retry strategy, and post-hoc recovery materially affect final outcomes. The voting ensemble improves cross-dataset stability, while the oracle comparison suggests further gains are feasible through adaptive model routing and improved prompt calibration (including golden-set few-shot selection).
-\subsection{Prompt Engineering Considerations}
-Although the current prompts provide consistent end-to-end execution, further improvements are plausible. In particular, few-shot example quality is expected to be a major sensitivity factor. A stronger design would use a curated \textit{golden set} of representative and label-reliable examples selected to maximize coverage of difficult linguistic patterns (e.g., ambiguity, irony, entity-dependent polarity, and domain-specific jargon). Such prompt calibration may improve class separation and reduce cross-model disagreement.
+\section{Summary and Conclusions}
+The experiments demonstrate that while individual Large Language Models are highly effective for sentiment analysis, their performance varies significantly across different domains. Our voting approach proved beneficial for structured datasets, such as financial reports, where it consistently improved both Accuracy and F1-scores by filtering out random errors from single models. 
 
+However, we observed that on noisier data (e.g., social media), simple voting does not always outperform the best single model. It is important to note that the results presented here are highly dependent on the quality of the instructions provided to the models. Further refinement of prompt engineering—specifically through better selection of few-shot examples and more detailed category descriptions—could likely lead to even higher classification accuracy across all tested domains.
 
 \bibliographystyle{IEEEtran}
 \bibliography{bibliography}
