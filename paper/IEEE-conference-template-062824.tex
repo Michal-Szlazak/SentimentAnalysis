@@ -7,10 +7,13 @@
 \usepackage{amsmath,amssymb,amsfonts}
 \usepackage{graphicx}
 \usepackage{textcomp}
-\usepackage{xcolor}
+\usepackage[table]{xcolor}
+\usepackage{float}
+\usepackage{microtype}
 \usepackage[hidelinks, bookmarks=true]{hyperref}
 \def\BibTeX{{\rm B\kern-.05em{\sc i\kern-.025em b}\kern-.08em
     T\kern-.1667em\lower.7ex\hbox{E}\kern-.125emX}}
+\newcommand{\best}[1]{\textbf{#1}}
 \begin{document}
 
 \title{Benchmarking Classical ML, Transformers, and Large Language Models in Multidomain Sentiment Classification\\
@@ -52,16 +55,16 @@ TODO + sample citation
 We run sentiment inference for each dataset using Gemini, Mistral, and Llama. All outputs are stored in JSONL format with three fields: text, predicted sentiment label, and original sample index. The index is used as the primary key to align predictions with ground truth during evaluation.
 
 \subsection{Prompt Design}
-Prompt templates are dataset-specific and follow a fixed five-block structure. This structure was used consistently across models and datasets to improve comparability and output stability. Each prompt is organized as follows:
+Prompt templates are dataset-specific and follow a fixed five-block structure.
+The same structure is used across all models and datasets to improve comparability and output stability.
+Each prompt is organized as follows:
 \begin{itemize}
 \item \textbf{SYSTEM ROLE}: defines the model as a sentiment classification engine and sets the expected analytical behavior.
-\item \textbf{DATA CONTEXT}: specifies the dataset domain and task type (for IMDb: movie-review binary sentiment).
-\item \textbf{CATEGORY DEFINITIONS}: provides an explicit numeric mapping (for IMDb: $0 \rightarrow$ negative, $1 \rightarrow$ positive).
+\item \textbf{DATA CONTEXT}: specifies the dataset domain and task type.
+\item \textbf{CATEGORY DEFINITIONS}: provides an explicit numeric mapping.
 \item \textbf{FEW-SHOT EXAMPLES}: includes labeled positive/negative review snippets to anchor decision boundaries.
 \item \textbf{ENTRIES TO CLASSIFY}: appends the current batch items to be labeled.
 \end{itemize}
-
-\textit{[TABLE 2 HERE: Prompt schema and example label mappings per dataset.]}
 
 \subsection{API Pipeline and Reliability Mechanisms}
 Inference is executed in batch mode, where multiple dataset examples are sent within a single API request for joint classification. This design improves throughput and reduces request overhead. During execution, we observed intermittent API errors, primarily related to rate limiting and safety filtering (e.g., responses flagged as ``prohibited content'').
@@ -110,9 +113,30 @@ Gemini & imdb & 1 \\
 \end{table}
 
 \section{Evaluation Protocol and Per-Model Results}
-Predictions are evaluated against full ground-truth files using Accuracy and macro-F1. In addition, we report operational counters: evaluated records, blocked records, invalid rows, and missing predictions. This decomposition is essential, because high metric values on evaluated samples may coexist with reduced pipeline completeness.
+Predictions are evaluated against full ground-truth files using Accuracy and macro-F1.
 
-\textit{[TABLE 3 HERE: Per-model, per-dataset results (Accuracy, F1, Eval, Blocked, Invalid, Missing).]}
+\begin{table*}[t]
+\centering
+\scriptsize
+\caption{Per-dataset performance of Gemini, Mistral, and Llama (Accuracy and Macro-F1).}
+\label{tab:llm_results_main}
+\begin{tabular}{|l|cc|cc|cc|}
+\hline
+\textbf{Dataset} & \multicolumn{2}{c|}{\textbf{Gemini}} & \multicolumn{2}{c|}{\textbf{Mistral}} & \multicolumn{2}{c|}{\textbf{Llama}} \\
+ & Acc & F1-macro & Acc & F1-macro & Acc & F1-macro \\
+\hline
+twitter              & \best{0.573} & \best{0.535} & 0.515 & 0.471 & 0.533 & 0.494 \\
+imdb                 & \best{0.958} & \best{0.958} & 0.939 & 0.939 & 0.955 & 0.955 \\
+finance\_50agree     & 0.803 & 0.819 & 0.780 & 0.786 & \best{0.821} & \best{0.823} \\
+finance\_66agree     & 0.860 & 0.862 & 0.844 & 0.844 & \best{0.873} & \best{0.870} \\
+finance\_75agree     & \best{0.903} & \best{0.899} & 0.878 & 0.865 & 0.899 & 0.889 \\
+finance\_all\_agree  & 0.920 & 0.912 & 0.894 & 0.891 & \best{0.921} & \best{0.915} \\
+yelp\_full           & 0.622 & 0.608 & \best{0.666} & \best{0.666} & 0.649 & 0.640 \\
+tweet\_eval\_sentiment & \best{0.683} & \best{0.688} & 0.676 & 0.679 & 0.658 & 0.662 \\
+tweet\_eval\_irony   & \best{0.809} & \best{0.807} & 0.731 & 0.731 & 0.786 & 0.784 \\
+\hline
+\end{tabular}
+\end{table*}
 
 The empirical results indicate that no single model is uniformly dominant across all domains. Performance is dataset-dependent: some models are more stable on cleaner corpora, whereas others are more competitive on noisy social-media benchmarks. This motivates ensemble aggregation rather than fixed single-model selection.
 
@@ -120,17 +144,38 @@ The empirical results indicate that no single model is uniformly dominant across
 To combine complementary model behavior, we construct a voting ensemble over Gemini, Mistral, and Llama predictions for each sample index. The final label is selected by majority vote. In the absence of a strict majority, ties are resolved using a fixed priority order:
 
 \begin{center}
-Gemini $>$ Mistral $>$ Llama.
+Gemini $>$ Llama $>$ Mistral
 \end{center}
 
 The priority is determined by average model effectiveness observed in the benchmark. This tie-break policy reduces unresolved outputs and guarantees deterministic final predictions.
 
-\textit{[TABLE 4 HERE: Voting rule variants and tie-resolution impact.]}
+\begin{table}[H]
+\centering
+\footnotesize
+\caption{Voting performance versus the best LLM result per dataset.}
+\label{tab:voting_vs_best_llm}
+\resizebox{\columnwidth}{!}{%
+\begin{tabular}{|l|l|c|}
+\hline
+\textbf{Dataset} & \textbf{Voting (Acc/F1)} & \textbf{Best LLM (Acc/F1)} \\
+\hline
+twitter                & 0.5561 / 0.5130 & \best{0.5734} / \best{0.5353} \\
+imdb                   & 0.9585 / 0.9585 & 0.9585 / 0.9585 \\
+finance\_50agree       & 0.8175 / \best{0.8246} & \best{0.8206} / 0.8233 \\
+finance\_66agree       & \best{0.8803} / \best{0.8780} & 0.8732 / 0.8703 \\
+finance\_75agree       & \best{0.9117} / \best{0.9009} & 0.9030 / 0.8987 \\
+finance\_all\_agree    & \best{0.9338} / \best{0.9290} & 0.9205 / 0.9145 \\
+yelp\_full             & 0.6604 / 0.6542 & \best{0.6664} / \best{0.6660} \\
+tweet\_eval\_sentiment & \best{0.6868} / \best{0.6913} & 0.6829 / 0.6880 \\
+tweet\_eval\_irony     & 0.7987 / 0.7980 & \best{0.8091} / \best{0.8073} \\
+\hline
+\end{tabular}
+}
+\end{table}
 
-\section{Upper-Bound Analysis: Best Model per Dataset}
-To estimate attainable headroom, we additionally report an oracle-style upper bound: for each dataset, we select the best-performing single model and aggregate these best scores across datasets. Although this is not directly deployable, it quantifies potential gains achievable by learned routing or meta-selection.
-
-\textit{[TABLE 5 HERE: Single best global model vs voting ensemble vs oracle best-per-dataset.]}
+As shown in Table~\ref{tab:voting_vs_best_llm}, voting is competitive with the best single-LLM baseline and exceeds it on several datasets.
+In particular, both Accuracy and macro-F1 improve on Finance-66Agree, Finance-75Agree, Finance-All-Agree, and TweetEval-Sentiment.
+At the same time, voting underperforms the best single model on Twitter, Yelp-Full, and TweetEval-Irony, indicating that aggregation benefits are dataset-dependent.
 
 \section{Discussion}
 The experiments indicate that robust LLM-based sentiment analysis requires both strong modeling choices and resilient systems engineering. Prompt quality, output constraints, retry strategy, and post-hoc recovery materially affect final outcomes. The voting ensemble improves cross-dataset stability, while the oracle comparison suggests further gains are feasible through adaptive model routing and improved prompt calibration (including golden-set few-shot selection).
