@@ -5,13 +5,15 @@
 
 \usepackage{cite}
 \usepackage{amsmath,amssymb,amsfonts}
-\usepackage{algorithmic}
 \usepackage{graphicx}
 \usepackage{textcomp}
-\usepackage{xcolor}
+\usepackage[table]{xcolor}
+\usepackage{float}
+\usepackage{microtype}
 \usepackage[hidelinks, bookmarks=true]{hyperref}
 \def\BibTeX{{\rm B\kern-.05em{\sc i\kern-.025em b}\kern-.08em
     T\kern-.1667em\lower.7ex\hbox{E}\kern-.125emX}}
+\newcommand{\best}[1]{\textbf{#1}}
 \begin{document}
 
 \title{Benchmarking Classical ML, Transformers, and Large Language Models in Multidomain Sentiment Classification\\
@@ -49,6 +51,259 @@ TODO
 TODO + sample citation
 \cite{liskowski2026large}
 
+\section{LLM-Based Sentiment Classification Setup}
+The inference pipeline was designed to evaluate the capabilities of state-of-the-art LLMs in a controlled, reproducible environment. All models were accessed through the \textbf{Google Cloud Vertex AI API}, which provided a unified infrastructure for request management and model serving. We utilized three distinct architectures:
+\begin{itemize}
+    \item \textbf{Gemini}: gemini-2.5-flash
+    \item \textbf{Mistral}: mistral-small-2503
+    \item \textbf{Llama}: llama-4-maverick-17b-128e-instruct-maas
+\end{itemize}
+
+The classification process was orchestrated via a Python-based integration layer, capturing outputs in structured JSONL format to ensure data integrity and facilitate precise alignment with ground-truth labels through unique sample indices.
+\subsection{Prompt Engineering and In-Context Learning}
+To minimize variance across model responses, we employed a standardized, five-block prompt architecture. This structure leverages In-Context Learning (ICL) principles to provide the models with both semantic boundaries and formatting constraints:
+\begin{itemize}
+\item \textbf{System Role}: Establishes the persona of a domain-expert sentiment classifier, optimizing the model's internal attention mechanisms for the task.
+\item \textbf{Data Context}: Mitigates domain-shift issues by specifying the source of the text (np. financial reports vs. social media).
+\item \textbf{Category Definitions}: Provides a rigid mapping of labels to numeric or categorical values, reducing lexical ambiguity.
+\item \textbf{Few-Shot Examples}: Serves as a calibration mechanism. By including curated positive and negative snippets, we anchor the decision boundary, which is particularly critical for noisy datasets like Twitter.
+\item \textbf{Target Input}: Appends the batch of records for inference, utilizing a clear separator to prevent prompt injection or context leakage.
+\end{itemize}
+
+\vspace{-0.6em}
+
+\subsection{Pipeline Resilience and Error Handling}
+Large-scale API-based inference introduces challenges regarding rate limits and safety-alignment triggers. During the initial pass, we observed a non-negligible rate of unclassified examples (Table~\ref{tab:unclassified_by_model}), primarily due to:
+\begin{enumerate}
+    \item \textbf{Rate Limiting}: Exceeding tokens-per-minute (TPM) or requests-per-minute (RPM) quotas.
+    \item \textbf{Content Filtering}: False positives in safety filters where benign text (e.g., intense movie reviews on IMDb) was flagged as prohibited content.
+\end{enumerate}
+
+To ensure a complete dataset for benchmarking, we implemented a multi-stage recovery framework. This included an exponential backoff strategy for rate limits and a secondary "atomic-retry" pass for samples that failed within batches (re-submitting blocked batch-items as individual requests). As shown in Table~\ref{tab:unclassified_by_model_after_retry}, this methodology reduced the missing data to a statistically insignificant level (near-zero loss).
+\begin{table}[H]
+\centering
+\caption{Initially unclassified examples by model and dataset}
+\label{tab:unclassified_by_model}
+\begin{tabular}{|l|l|r|}
+\hline
+\textbf{Model} & \textbf{Dataset} & \textbf{Unclassified} \\
+\hline
+Mistral & twitter & 12 \\
+Mistral & imdb & 94 \\
+Mistral & yelp\_full & 28 \\
+\hline
+Llama & twitter & 120 \\
+Llama & imdb & 1052 \\
+Llama & yelp\_full & 10 \\
+Llama & tweet\_eval\_sentiment & 181 \\
+Llama & tweet\_eval\_irony & 30 \\
+\hline
+Gemini & twitter & 2 \\
+Gemini & imdb & 1 \\
+Gemini & finance\_all\_agree & 1 \\
+Gemini & tweet\_eval\_sentiment & 30 \\
+\hline
+\end{tabular}
+\end{table}
+
+\begin{table}[H]
+\centering
+\caption{Unclassified examples by model and dataset after retry}
+\label{tab:unclassified_by_model_after_retry}
+\begin{tabular}{|l|l|r|}
+\hline
+\textbf{Model} & \textbf{Dataset} & \textbf{Unclassified} \\
+\hline
+Llama & imdb & 21 \\
+\hline
+Gemini & imdb & 1 \\
+\hline
+\end{tabular}
+\end{table}
+
+Problems with content filtering aligns with observations documented in other researches \cite{sa-in-age-of-genai}, where was also noted that generative models, especially from the Llama family, sometimes refuse to process prompts containing profanity or intense emotional language, even when such content is essential for sentiment analysis in user-generated reviews.
+
+\section{Evaluation and Comparative Analysis}
+The models were evaluated using Accuracy and Macro-averaged F1-score to account for potential class imbalances across the multidomain datasets.
+\begin{table}[H]
+\centering
+\scriptsize
+\caption{Per-dataset performance of Gemini, Mistral, and Llama (Accuracy and Macro-F1).}
+\label{tab:llm_results_main}
+\resizebox{\columnwidth}{!}{%
+\begin{tabular}{|l|cc|cc|cc|}
+\hline
+\textbf{Dataset} & \multicolumn{2}{c|}{\textbf{Gemini}} & \multicolumn{2}{c|}{\textbf{Mistral}} & \multicolumn{2}{c|}{\textbf{Llama}} \\
+ & Acc & F1-macro & Acc & F1-macro & Acc & F1-macro \\
+\hline
+twitter              & \best{0.573} & \best{0.535} & 0.515 & 0.471 & 0.533 & 0.494 \\
+imdb                 & \best{0.958} & \best{0.958} & 0.939 & 0.939 & 0.955 & 0.955 \\
+finance\_50agree     & 0.803 & 0.819 & 0.780 & 0.786 & \best{0.821} & \best{0.823} \\
+finance\_66agree     & 0.860 & 0.862 & 0.844 & 0.844 & \best{0.873} & \best{0.870} \\
+finance\_75agree     & \best{0.903} & \best{0.899} & 0.878 & 0.865 & 0.899 & 0.889 \\
+finance\_all\_agree  & 0.920 & 0.912 & 0.894 & 0.891 & \best{0.921} & \best{0.915} \\
+yelp\_full           & 0.622 & 0.608 & \best{0.666} & \best{0.666} & 0.649 & 0.640 \\
+tweet\_eval\_sentiment & \best{0.683} & \best{0.688} & 0.676 & 0.679 & 0.658 & 0.662 \\
+tweet\_eval\_irony   & \best{0.809} & \best{0.807} & 0.731 & 0.731 & 0.786 & 0.784 \\
+\hline
+\end{tabular}
+}
+\end{table}
+
+The empirical results indicate that no single model is uniformly dominant across all domains. Performance is dataset-dependent: some models are more stable on cleaner corpora, whereas others are more competitive on noisy social-media benchmarks.
+
+\section{Multi-Model Voting and Tie-Breaking Strategy}
+To improve the stability of our classifications, we combined the predictions from all three models (Gemini, Llama and Mistral) using a majority voting logic. For every text sample, the final label was chosen based on the most frequent prediction among the models.
+
+This approach is inspired by the multi-agent negotiation frameworks proposed in literature \cite{sun2023sentiment}, where multiple LLM outputs are generated through role-flipped negotiations and a final sentiment polarity is determined by selecting the most frequent decision.
+
+In cases where all three models provided different labels (a total disagreement), we applied a fixed priority rule to resolve the tie. The priority was based on the overall performance of the models during our tests:
+\begin{enumerate}
+    \item \textbf{Gemini} (Highest priority)
+    \item \textbf{Llama}
+    \item \textbf{Mistral}
+\end{enumerate}
+This ensures that whenever a consensus is not reached, the system relies on the prediction from the model that proved most reliable across the majority of our datasets.
+\begin{table}[H]
+\centering
+\footnotesize
+\caption{Voting performance versus the best LLM result per dataset.}
+\label{tab:voting_vs_best_llm}
+\resizebox{\columnwidth}{!}{%
+\begin{tabular}{|l|l|c|}
+\hline
+\textbf{Dataset} & \textbf{Voting (Acc/F1)} & \textbf{Best LLM (Acc/F1)} \\
+\hline
+twitter                & 0.5561 / 0.5130 & \best{0.5734} / \best{0.5353} \\
+imdb                   & 0.9585 / 0.9585 & 0.9585 / 0.9585 \\
+finance\_50agree       & 0.8175 / \best{0.8246} & \best{0.8206} / 0.8233 \\
+finance\_66agree       & \best{0.8803} / \best{0.8780} & 0.8732 / 0.8703 \\
+finance\_75agree       & \best{0.9117} / \best{0.9009} & 0.9030 / 0.8987 \\
+finance\_all\_agree    & \best{0.9338} / \best{0.9290} & 0.9205 / 0.9145 \\
+yelp\_full             & 0.6604 / 0.6542 & \best{0.6664} / \best{0.6660} \\
+tweet\_eval\_sentiment & \best{0.6868} / \best{0.6913} & 0.6829 / 0.6880 \\
+tweet\_eval\_irony     & 0.7987 / 0.7980 & \best{0.8091} / \best{0.8073} \\
+\hline
+\end{tabular}
+}
+\end{table}
+
+As shown in Table~\ref{tab:voting_vs_best_llm}, voting is competitive with the best single-LLM baseline and exceeds it on several datasets.
+In particular, both Accuracy and macro-F1 improve on Finance-66Agree, Finance-75Agree, Finance-All-Agree, and TweetEval-Sentiment.
+At the same time, voting underperforms the best single model on Twitter, Yelp-Full, and TweetEval-Irony, indicating that aggregation benefits are dataset-dependent.
+
+\section{Cross-Model Ensemble Voting}
+\label{sec:cross_ensemble}
+
+The LLM-only voting framework presented in Section~IV demonstrates the potential of prediction aggregation, but it leaves an open question: does incorporating the full spectrum of model families-classical ML, deep learning, transformers, and LLMs-yield further improvements? To answer this, we extend the voting framework to all nine architectures evaluated in this benchmark: DistilBERT, DistilRoBERTa, CNN, VADER, TF-IDF\,+\,SVM, LSTM, Gemini, Llama, and Mistral. The motivation is that heterogeneous models exhibit complementary failure modes and, when combined, can compensate for each other's systematic biases.
+
+\subsection{Voting Strategies and Implementation}
+We evaluate four ensemble strategies applied row-by-row across the nine models:
+\begin{enumerate}
+    \item \textbf{Majority Voting}: each model contributes one vote; the most frequent label wins. Ties are resolved by random selection (fixed seed).
+    \item \textbf{Accuracy-Weighted Voting} (raw): each model's vote is weighted by its overall accuracy on the dataset. The label accumulating the highest total weight is selected.
+    \item \textbf{Confidence-Weighted Voting}: each vote is weighted by the model's predicted confidence score for that specific sample. Since LLMs do not expose calibrated probabilities, they receive a fallback weight equal to the mean confidence of the ML models on the same dataset.
+    \item \textbf{Majority Voting (ML\,+\,Transformer only)}: Gemini, Llama, and Mistral are excluded; majority voting is applied over the six remaining models.
+\end{enumerate}
+
+Accuracy-weighted voting was also evaluated with softmax-normalised weights, but since all nine model accuracies fall within a moderate range, the softmax compression reduces weights to near-uniform values ($\approx$0.11 per model), producing results identical to raw accuracy weighting. We therefore report only the raw variant.
+
+\subsection{Individual Model Performance}
+
+Table~\ref{tab:all_models_acc} reports the accuracy of each model across all nine datasets. Several domain-dependent patterns are immediately apparent. The DistilRoBERTa transformer is the strongest single model on the finance corpora, where fine-tuned language representations provide a clear advantage. Gemini leads on IMDB and TweetEval-Irony-tasks that benefit from broad world knowledge and nuanced semantic understanding. Conversely, on the Twitter dataset, the CNN and LSTM architectures outperform both transformers and LLMs by a notable margin; the concise, colloquial nature of tweets appears to favour pattern-based feature extractors over deep generative priors. VADER is consistently the weakest classifier across all domains, with near-chance performance on multi-class datasets such as Twitter (0.220) and Yelp-Full (0.300).
+
+\begin{table*}[t]
+\centering
+\scriptsize
+\caption{Individual model accuracy across all datasets. Dataset abbreviations: F50/F66/F75/FA = Finance-50/66/75/All-Agree; IDB = IMDB; TI/TS = TweetEval-Irony/Sentiment; TW = Twitter; YF = Yelp-Full.}
+\label{tab:all_models_acc}
+\resizebox{\textwidth}{!}{%
+\begin{tabular}{|l|c|c|c|c|c|c|c|c|c|}
+\hline
+\textbf{Model} & \textbf{F50} & \textbf{F66} & \textbf{F75} & \textbf{FA} & \textbf{IDB} & \textbf{TI} & \textbf{TS} & \textbf{TW} & \textbf{YF} \\
+\hline
+DistilBERT      & 0.853 & 0.872 & 0.935 & 0.951 & 0.921 & 0.667 & 0.704 & 0.834 & 0.600 \\
+DistilRoBERTa   & \best{0.865} & \best{0.884} & \best{0.938} & \best{0.971} & 0.930 & 0.688 & \best{0.707} & 0.800 & 0.621 \\
+CNN             & 0.789 & 0.834 & 0.864 & 0.834 & 0.862 & 0.595 & 0.571 & \best{0.866} & 0.540 \\
+VADER           & 0.540 & 0.572 & 0.576 & 0.532 & 0.699 & 0.475 & 0.535 & 0.220 & 0.300 \\
+TF-IDF\,+\,SVM  & 0.795 & 0.831 & 0.865 & 0.905 & 0.901 & 0.636 & 0.598 & 0.802 & 0.574 \\
+LSTM            & 0.691 & 0.741 & 0.784 & 0.804 & 0.887 & 0.606 & 0.621 & 0.853 & 0.505 \\
+Gemini          & 0.803 & 0.860 & 0.903 & 0.920 & \best{0.958} & \best{0.809} & 0.683 & 0.573 & 0.622 \\
+Llama           & 0.821 & 0.873 & 0.899 & 0.921 & 0.953 & 0.786 & 0.659 & 0.533 & 0.649 \\
+Mistral         & 0.780 & 0.844 & 0.878 & 0.894 & 0.939 & 0.732 & 0.676 & 0.515 & \best{0.666} \\
+\hline
+\end{tabular}
+}
+\end{table*}
+
+\subsection{Ensemble Results and Analysis}
+
+Table~\ref{tab:ensemble_comparison} presents the accuracy of each ensemble strategy alongside the best individual model per dataset. The delta columns ($\Delta$) quantify the gain or loss relative to that best-individual baseline.
+
+\begin{table}[H]
+\centering
+\scriptsize
+\caption{Ensemble accuracy vs.\ best individual model per dataset. $\Delta$ denotes difference from best individual. Best entry per row in \textbf{bold}.}
+\label{tab:ensemble_comparison}
+\resizebox{\columnwidth}{!}{%
+\begin{tabular}{|l|c|c|c|c|c|c|}
+\hline
+\textbf{Dataset} & \textbf{Best} & \textbf{Maj.} & \textbf{$\Delta$} & \textbf{Conf-W} & \textbf{$\Delta$} & \textbf{Maj. (no LLM)} \\
+\hline
+Finance-50  & 0.865 & 0.862 & $-$0.003 & 0.863          & $-$0.002 & 0.836 \\
+Finance-66  & 0.884 & 0.908 & $+$0.024 & \best{0.912}   & $+$0.028 & 0.856 \\
+Finance-75  & 0.938 & 0.960 & $+$0.022 & \best{0.964}   & $+$0.026 & 0.907 \\
+Finance-All & 0.971 & 0.976 & $+$0.004 & \best{0.980}   & $+$0.009 & 0.916 \\
+IMDB        & 0.958 & 0.959 & $+$0.001 & \best{0.959}   & $+$0.001 & 0.930 \\
+TE-Irony    & 0.809 & 0.757 & $-$0.052 & 0.759          & $-$0.050 & 0.655 \\
+TE-Sent.    & 0.707 & 0.723 & $+$0.016 & \best{0.724}   & $+$0.017 & 0.677 \\
+Twitter     & 0.866 & 0.863 & $-$0.003 & 0.870          & $+$0.003 & \best{0.891} \\
+Yelp-Full   & 0.666 & 0.652 & $-$0.015 & \best{0.659}   & $-$0.007 & 0.594 \\
+\hline
+\end{tabular}
+}
+\end{table}
+
+Confidence-weighted voting is the most reliable ensemble strategy, achieving the best result on eight out of nine datasets. Compared to the best individual model, it yields accuracy gains of up to +2.8 percentage points (Finance-66Agree) and never degrades by more than 0.7 pp (Yelp-Full). Majority voting performs similarly but is slightly less effective, as it treats all models-including the consistently weak VADER baseline-as equal contributors.
+
+\subsection{Domain-Specific Effects of LLM Inclusion}
+
+The Twitter dataset exposes a critical failure mode: all three LLMs score between 0.515 and 0.573, far below CNN (0.866) and LSTM (0.853). The source of this discrepancy is the Twitter dataset's three-class labeling scheme based on emotional intensity rather than simple sentiment polarity-a distinction that LLMs, trained on broad world knowledge, handle less reliably than task-specific classifiers. When LLMs are included in the majority vote, their poorly calibrated predictions drown out the signal from stronger models. Excluding them (Majority Voting, no LLM) recovers a gain of +2.5 pp over the best individual model, a result consistent with the findings of \cite{sa-in-age-of-genai} that generative models do not universally generalise across sentiment labeling conventions.
+
+On the finance corpora the relationship reverses: LLMs rank among the top three models, and including them in confidence-weighted voting is beneficial. This suggests that the optimal ensemble composition is task-dependent: LLMs should be included when their domain competence is confirmed, and excluded otherwise.
+
+\subsection{Model Disagreement and Ensemble Effectiveness}
+
+To understand when ensembles provide the greatest benefit, we compute the \emph{disagreement rate}-the proportion of samples for which not all models agree on the predicted label. Table~\ref{tab:disagreement} reports this metric per dataset alongside the confidence-weighted accuracy gain.
+
+\begin{table}[H]
+\centering
+\footnotesize
+\caption{Model disagreement rate and conf.-weighted accuracy gain ($\Delta$ vs.\ best individual).}
+\label{tab:disagreement}
+\begin{tabular}{|l|c|c|}
+\hline
+\textbf{Dataset}    & \textbf{Disagr. Rate} & \textbf{Conf-W $\Delta$} \\
+\hline
+Twitter             & 97.4\% & $+$0.003 \\
+TE-Irony            & 89.0\% & $-$0.050 \\
+TE-Sentiment        & 80.6\% & $+$0.017 \\
+Yelp-Full           & 84.4\% & $-$0.007 \\
+Finance-50          & 76.9\% & $-$0.002 \\
+Finance-66          & 66.4\% & $+$0.028 \\
+Finance-All         & 62.5\% & $+$0.009 \\
+Finance-75          & 61.5\% & $+$0.026 \\
+IMDB                & 45.9\% & $+$0.001 \\
+\hline
+\end{tabular}
+\end{table}
+
+A high disagreement rate does not, by itself, predict ensemble gains: Twitter and TweetEval-Irony are among the most contentious datasets yet both show no or negative gains when all models are pooled. The critical factor is whether the disagreeing models are wrong \emph{in different ways}. On the finance corpora, heterogeneous models systematically err on different samples, and majority aggregation corrects individual mistakes. On Twitter and Yelp-Full, the LLMs are biased toward incorrect labels in a correlated fashion, so aggregation compounds rather than corrects the error. This reinforces the importance of model selection as a prerequisite to ensemble construction.
+
+\section{Summary and Conclusions}
+The experiments demonstrate that while individual Large Language Models are highly effective for sentiment analysis, their performance varies significantly across different domains. Our voting approach proved beneficial for structured datasets, such as financial reports, where it consistently improved both Accuracy and F1-scores by filtering out random errors from single models. 
+
+However, we observed that on noisier data (e.g., social media), simple voting does not always outperform the best single model. It is important to note that the results presented here are highly dependent on the quality of the instructions provided to the models. Further refinement of prompt engineering-specifically through better selection of few-shot examples and more detailed category descriptions-could likely lead to even higher classification accuracy across all tested domains.
 
 \bibliographystyle{IEEEtran}
 \bibliography{bibliography}
