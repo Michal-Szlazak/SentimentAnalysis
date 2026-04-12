@@ -49,8 +49,20 @@ TODO
 \end{IEEEkeywords}
 
 \section{Introduction}
-TODO + sample citation
-\cite{liskowski2026large}
+Sentiment analysis remains one of the most common tasks in natural language processing because it is useful in many practical settings, including opinion mining, customer feedback analysis, finance, and social media monitoring \cite{singh2020sentiment} \cite{sharma2025review}. At the same time, it is still a difficult problem. Performance depends not only on model quality, but also on domain, label scheme, text length, noise level, and the amount of context needed to interpret sentiment correctly. A model that works well on product reviews may perform much worse on short tweets, irony, or finance-oriented texts.
+
+The range of available approaches has also expanded significantly. Classical machine learning models remain attractive because they are simple, fast, and easy to reproduce. Deep learning and transformer-based models usually offer better text representations and stronger in-domain performance. More recently, Large Language Models (LLMs) have become a promising alternative because they can perform sentiment classification in zero-shot or few-shot settings and can adapt to different tasks through prompting alone \cite{zhang2024sentiment,liskowski2026large}. However, recent studies also show that LLM-based sentiment analysis is not uniformly superior across datasets and may be affected by prompt sensitivity, uncertainty, and domain mismatch \cite{sa-in-age-of-genai,herrera2025overview}.
+
+For this reason, the main question is no longer only which single model performs best, but whether different model families can be combined in a useful way. Hybrid approaches are appealing because they may exploit complementary strengths: one model can be strong on clean, well-structured texts, while another may handle ambiguity, irony, or domain-specific phrasing better. On the other hand, if several models make errors on the same examples, then simple voting may bring only limited gains. Understanding both predictive performance and error overlap is therefore necessary if we want to design hybrid sentiment classification systems in a principled way.
+
+In this paper, we benchmark nine sentiment classification models from four families: classical ML, deep learning, transformers, and LLMs. We evaluate them on datasets from multiple domains, including finance, reviews, and social media. We then study three hybrid strategies: LLM-only voting, a confidence-based hierarchical scheme that escalates difficult cases to stronger models, and heterogeneous ensemble voting across all model families. Finally, we analyse how model errors overlap across datasets and inspect hard examples that are misclassified by many models at once. This lets us answer three practical questions: when does combining models actually help, when can confidence be used to balance quality and cost, and when do correlated errors limit the value of simple aggregation.
+
+The main contributions of this work are as follows:
+\begin{itemize}
+    \item We provide a multidomain benchmark comparing classical ML, deep learning, transformers, and LLMs under a unified evaluation setup.
+    \item We evaluate three hybrid strategies: LLM-only voting, confidence-based hierarchical voting, and cross-family ensemble voting, measuring both performance gains and the practical trade-off between stronger and cheaper models.
+    \item We complement standard accuracy-based evaluation with an analysis of error overlap and hard examples, showing when different models are genuinely complementary and when they fail in similar ways.
+\end{itemize}
 
 \section{Chosen datasets}
 TODO
@@ -203,7 +215,7 @@ The experiments demonstrate that while individual Large Language Models are high
 However, we observed that on noisier data (e.g., social media), simple voting does not always outperform the best single model. It is important to note that the results presented here are highly dependent on the quality of the instructions provided to the models. Further refinement of prompt engineering-specifically through better selection of few-shot examples and more detailed category descriptions-could likely lead to even higher classification accuracy across all tested domains.
 
 \section{Multi-Model Confidence Voting}
-In real-world applications of sentiment analysis, predictive performance is not the sole consideration. Operational efficiency - specifically the costs associated with hardware requirements and inference throughput - is equally critical. Large Language Models (LLMs) and other Transformer-based architectures, such as BERT or RoBERTa, are significantly more resource-intensive than traditional approaches like Convolutional Neural Networks (CNNs) \cite{lmao}.
+In real-world applications of sentiment analysis, predictive performance is not the sole consideration. Operational efficiency - specifically the costs associated with hardware requirements and inference throughput - is equally critical. Large Language Models (LLMs) and other Transformer-based architectures, such as BERT or RoBERTa, are significantly more resource-intensive than traditional approaches like Convolutional Neural Networks (CNNs) \cite{zhang2024sentiment,sa-in-age-of-genai}.
 
 To mitigate these costs, a hybrid framework is proposed to maximize the utilization of computationally efficient models for trivial cases while reserving more powerful models for challenging ones. The proposed system utilizes the confidence scores produced by each model during inference. Models are organized hierarchically, from the least to the most computationally expensive:
 \begin{enumerate}
@@ -220,7 +232,7 @@ The framework was evaluated using three confidence thresholds: 0.90, 0.95, and 0
 \centering
 \scriptsize
 \caption{Per-dataset accuracy of Multi-Model Confidence Voting with different thresholds.}
-\label{tab:llm_results_main}
+\label{tab:confidence_voting_results}
 \resizebox{\columnwidth}{!}{%
 \begin{tabular}{|l|c|c|c|}
 \hline
