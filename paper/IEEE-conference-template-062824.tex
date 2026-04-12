@@ -10,6 +10,7 @@
 \usepackage[table]{xcolor}
 \usepackage{float}
 \usepackage{microtype}
+\usepackage{booktabs}
 \usepackage[hidelinks, bookmarks=true]{hyperref}
 \def\BibTeX{{\rm B\kern-.05em{\sc i\kern-.025em b}\kern-.08em
     T\kern-.1667em\lower.7ex\hbox{E}\kern-.125emX}}
@@ -364,6 +365,138 @@ The error-overlap analysis has direct consequences for the design of hybrid sent
 
 These findings motivate a more selective hybrid strategy than uniform voting. The results reported in Section~\ref{sec:cross_ensemble} already suggest that the best model family is dataset-dependent: transformers dominate on the finance corpora, LLMs are strongest on IMDB and TweetEval-Irony, and deep learning models are clearly superior on Twitter. Rather than treating all predictions as equally useful, future hybrid methods should take into account both expected model quality and the degree of error correlation between model families. In this sense, error-overlap analysis is not only descriptive; it helps identify the conditions under which more adaptive hybrid architectures may be worth exploring.
 
+\section{Multi-Model Confidence Voting}
+In real-world applications of sentiment analysis, predictive performance is not the sole consideration. Operational efficiency - specifically the costs associated with hardware requirements and inference throughput - is equally critical. Large Language Models (LLMs) and other Transformer-based architectures, such as BERT or RoBERTa, are significantly more resource-intensive than traditional approaches like Convolutional Neural Networks (CNNs) \cite{lmao}.
+
+To mitigate these costs, a hybrid framework is proposed to maximize the utilization of computationally efficient models for trivial cases while reserving more powerful models for challenging ones. The proposed system utilizes the confidence scores produced by each model during inference. Models are organized hierarchically, from the least to the most computationally expensive:
+\begin{enumerate}
+    \item SVM
+    \item CNN
+    \item LSTM
+    \item RoBERTa
+    \item Gemini
+\end{enumerate}
+This ordering ensures that the more expensive Transformer models are positioned at the end of the chain. In theory, this ensures that only the most complex cases are processed by these high-cost models, while simpler instances are classified by traditional architectures.
+
+The framework was evaluated using three confidence thresholds: 0.90, 0.95, and 0.98.
+\begin{table}[H]
+\centering
+\scriptsize
+\caption{Per-dataset accuracy of Multi-Model Confidence Voting with different thresholds.}
+\label{tab:llm_results_main}
+\resizebox{\columnwidth}{!}{%
+\begin{tabular}{|l|c|c|c|}
+\hline
+\textbf{Dataset} & \textbf{0.90} & \textbf{0.95} & \textbf{0.98} \\
+
+\hline
+twitter              & \best{0.856} & 0.824 & 0.766 \\
+imdb                 & 0.925 & 0.938 & \best{0.948} \\
+finance\_50agree     & \best{0.854} & 0.851 & 0.830 \\
+finance\_66agree     & 0.892 & 0.902 & \best{0.906} \\
+finance\_75agree     & 0.931 & 0.944 &\best{0.952} \\
+finance\_all\_agree  & \best{0.945} & 0.923 & 0.815 \\
+yelp\_full           & \best{0.626} & 0.624 & 0.623 \\
+tweet\_eval\_sentiment & \best{0.691} & 0.688 & 0.683 \\
+tweet\_eval\_irony   & 0.790 & \best{0.811} & 0.810 \\
+\hline
+\end{tabular}
+}
+\end{table}
+
+The results indicate that the 0.90 threshold generally yielded the most consistent performance. While the 0.98 threshold outperformed others on specific datasets, it exhibited significant volatility, whereas the 0.90 threshold maintained steady accuracy across all tested environments.
+
+\begin{table}[H] % Asterisk makes the table span both columns
+\centering
+\caption{Model Utilization Across Different Threshold Values}
+\label{tab:model_comparison}
+\resizebox{\columnwidth}{!}{
+\small
+\begin{tabular}{lcccccc}
+\toprule
+& \multicolumn{2}{c}{\textbf{Threshold 0.90}} & \multicolumn{2}{c}{\textbf{Threshold 0.95}} & \multicolumn{2}{c}{\textbf{Threshold 0.98}} \\
+\cmidrule(lr){2-3} \cmidrule(lr){4-5} \cmidrule(lr){6-7}
+\textbf{Model} & \textbf{Usage} & \textbf{Acc.} & \textbf{Usage} & \textbf{Acc.} & \textbf{Usage} & \textbf{Acc.} \\
+\midrule
+
+\multicolumn{7}{l}{\textit{Dataset: Finance 50Agree}} \\
+TF-IDF + SVM & 0.149 & 0.966 & 0.031 & 0.967 & 0.001 & 1.000 \\
+CNN & 0.332 & 0.882 & 0.305 & 0.926 & 0.185 & 0.961 \\
+LSTM & 0.032 & 0.774 & 0.018 & 1.000 & 0.003 & 1.000 \\
+distilroberta-base & 0.293 & 0.940 & 0.298 & 0.958 & 0.204 & 0.990 \\
+gemini & 0.194 & 0.601 & 0.348 & 0.675 & 0.607 & 0.737 \\
+\addlinespace[0.5em]
+
+\multicolumn{7}{l}{\textit{Dataset: Finance 66Agree}} \\
+TF-IDF + SVM & 0.287 & 0.959 & 0.103 & 0.989 & 0.007 & 1.000 \\
+CNN & 0.252 & 0.897 & 0.261 & 0.932 & 0.194 & 0.976 \\
+LSTM & 0.101 & 0.812 & 0.078 & 0.818 & 0.032 & 0.926 \\
+distilroberta-base & 0.268 & 0.907 & 0.364 & 0.951 & 0.364 & 0.987 \\
+gemini & 0.092 & 0.718 & 0.194 & 0.756 & 0.403 & 0.797 \\
+\addlinespace[0.5em]
+
+\multicolumn{7}{l}{\textit{Dataset: Finance 75Agree}} \\
+TF-IDF + SVM & 0.473 & 0.982 & 0.275 & 0.989 & 0.054 & 1.000 \\
+CNN & 0.104 & 0.861 & 0.158 & 0.963 & 0.227 & 0.975 \\
+LSTM & 0.084 & 0.707 & 0.109 & 0.813 & 0.142 & 0.929 \\
+distilroberta-base & 0.298 & 0.951 & 0.394 & 0.960 & 0.450 & 0.981 \\
+gemini & 0.041 & 0.821 & 0.065 & 0.822 & 0.127 & 0.818 \\
+\addlinespace[0.5em]
+
+\multicolumn{7}{l}{\textit{Dataset: Finance All Agree}} \\
+TF-IDF + SVM & 0.545 & 0.984 & 0.307 & 0.986 & 0.051 & 1.000 \\
+CNN & 0.113 & 0.882 & 0.199 & 0.967 & 0.216 & 0.969 \\
+LSTM & 0.031 & 0.929 & 0.062 & 0.857 & 0.110 & 0.980 \\
+distilroberta-base & 0.285 & 0.969 & 0.375 & 0.976 & 0.417 & 0.989 \\
+gemini & 0.026 & 0.167 & 0.057 & 0.154 & 0.205 & 0.161 \\
+\addlinespace[0.5em]
+
+\multicolumn{7}{l}{\textit{Dataset: Imdb}} \\
+TF-IDF + SVM & 0.643 & 0.981 & 0.513 & 0.991 & 0.355 & 0.996 \\
+CNN & 0.225 & 0.805 & 0.265 & 0.870 & 0.299 & 0.933 \\
+LSTM & 0.036 & 0.817 & 0.027 & 0.886 & 0.018 & 0.923 \\
+distilroberta-base & 0.082 & 0.874 & 0.162 & 0.912 & 0.259 & 0.929 \\
+gemini & 0.014 & 0.826 & 0.033 & 0.830 & 0.068 & 0.837 \\
+\addlinespace[0.5em]
+
+\multicolumn{7}{l}{\textit{Dataset: Tweet Eval Irony}} \\
+TF-IDF + SVM & 0.013 & 0.826 & 0.002 & 1.000 & - & - \\
+CNN & 0.212 & 0.743 & 0.091 & 0.792 & 0.026 & 0.891 \\
+distilroberta-base & 0.183 & 0.843 & 0.109 & 0.911 & 0.029 & 0.960 \\
+gemini & 0.592 & 0.789 & 0.798 & 0.799 & 0.945 & 0.803 \\
+\addlinespace[0.5em]
+
+\multicolumn{7}{l}{\textit{Dataset: Tweet Eval Sentiment}} \\
+TF-IDF + SVM & 0.018 & 0.935 & 0.006 & 0.940 & 0.001 & 0.933 \\
+CNN & 0.196 & 0.734 & 0.117 & 0.791 & 0.060 & 0.845 \\
+LSTM & 0.007 & 0.784 & 0.001 & 0.875 & 0.001 & 1.000 \\
+distilroberta-base & 0.224 & 0.864 & 0.129 & 0.907 & 0.042 & 0.926 \\
+gemini & 0.555 & 0.596 & 0.748 & 0.632 & 0.897 & 0.660 \\
+\addlinespace[0.5em]
+
+\multicolumn{7}{l}{\textit{Dataset: Twitter}} \\
+TF-IDF + SVM & 0.127 & 0.986 & 0.054 & 0.991 & 0.016 & 0.996 \\
+CNN & 0.614 & 0.961 & 0.616 & 0.975 & 0.561 & 0.985 \\
+LSTM & 0.092 & 0.900 & 0.105 & 0.932 & 0.117 & 0.953 \\
+distilroberta-base & 0.045 & 0.822 & 0.045 & 0.887 & 0.035 & 0.933 \\
+gemini & 0.122 & 0.171 & 0.180 & 0.181 & 0.270 & 0.195 \\
+\addlinespace[0.5em]
+
+\multicolumn{7}{l}{\textit{Dataset: Yelp Full}} \\
+TF-IDF + SVM & 0.001 & 1.000 & - & - & - & - \\
+CNN & 0.049 & 0.892 & 0.013 & 0.981 & 0.003 & 1.000 \\
+LSTM & 0.024 & 0.875 & 0.009 & 0.892 & 0.002 & 1.000 \\
+distilroberta-base & 0.079 & 0.905 & 0.045 & 0.956 & 0.003 & 1.000 \\
+gemini & 0.847 & 0.577 & 0.932 & 0.600 & 0.992 & 0.620 \\
+\bottomrule
+
+\end{tabular}
+}
+\end{table}
+
+Utilization metrics reveal that reliance on expensive models was significantly lower at a 0.90 threshold compared to 0.98. However, in certain datasets where initial model confidence was inherently low, the terminal model was invoked for the majority of cases. Across nearly all datasets and thresholds, the preceding models maintained high accuracy when their confidence exceeded the threshold. This suggests that the proposed confidence-voting hybrid is a viable strategy for optimizing operational costs in large-scale sentiment analysis without compromising long-term accuracy.
+
+The lower accuracy observed in the terminal model (Gemini) across specific datasets - most notably in the Finance and Twitter subsets - can be attributed to the cascading nature of the framework. Because the preceding models successfully classified 'clear' instances with high confidence, the terminal model was exclusively tasked with the 'residuals': samples characterized by extreme ambiguity, linguistic noise, or domain-specific complexity that challenged all previous architectures in the pipeline.
 \bibliographystyle{IEEEtran}
 \bibliography{bibliography}
 
