@@ -192,6 +192,12 @@ As shown in Table~\ref{tab:voting_vs_best_llm}, voting is competitive with the b
 In particular, both Accuracy and macro-F1 improve on Finance-66Agree, Finance-75Agree, Finance-All-Agree, and TweetEval-Sentiment.
 At the same time, voting underperforms the best single model on Twitter, Yelp-Full, and TweetEval-Irony, indicating that aggregation benefits are dataset-dependent.
 
+\subsection{Summary of LLM-Based Results}
+
+The experiments demonstrate that while individual Large Language Models are highly effective for sentiment analysis, their performance varies significantly across different domains. Our voting approach proved beneficial for structured datasets, such as financial reports, where it consistently improved both Accuracy and F1-scores by filtering out random errors from single models.
+
+However, we observed that on noisier data (e.g., social media), simple voting does not always outperform the best single model. It is important to note that the results presented here are highly dependent on the quality of the instructions provided to the models. Further refinement of prompt engineering-specifically through better selection of few-shot examples and more detailed category descriptions-could likely lead to even higher classification accuracy across all tested domains.
+
 \section{Cross-Model Ensemble Voting}
 \label{sec:cross_ensemble}
 
@@ -300,10 +306,63 @@ IMDB                & 45.9\% & $+$0.001 \\
 
 A high disagreement rate does not, by itself, predict ensemble gains: Twitter and TweetEval-Irony are among the most contentious datasets yet both show no or negative gains when all models are pooled. The critical factor is whether the disagreeing models are wrong \emph{in different ways}. On the finance corpora, heterogeneous models systematically err on different samples, and majority aggregation corrects individual mistakes. On Twitter and Yelp-Full, the LLMs are biased toward incorrect labels in a correlated fashion, so aggregation compounds rather than corrects the error. This reinforces the importance of model selection as a prerequisite to ensemble construction.
 
-\section{Summary and Conclusions}
-The experiments demonstrate that while individual Large Language Models are highly effective for sentiment analysis, their performance varies significantly across different domains. Our voting approach proved beneficial for structured datasets, such as financial reports, where it consistently improved both Accuracy and F1-scores by filtering out random errors from single models. 
+\section{Cross-Model Error Overlap Analysis}
+\label{sec:error_overlap}
 
-However, we observed that on noisier data (e.g., social media), simple voting does not always outperform the best single model. It is important to note that the results presented here are highly dependent on the quality of the instructions provided to the models. Further refinement of prompt engineering-specifically through better selection of few-shot examples and more detailed category descriptions-could likely lead to even higher classification accuracy across all tested domains.
+The ensemble results above show that prediction aggregation is beneficial only in selected settings. To explain this behaviour, we analyse \emph{where} the models fail rather than only \emph{how often} they fail. For each dataset, we therefore measure pairwise overlap between model error sets using the Jaccard similarity coefficient, compute the distribution of samples misclassified by multiple models simultaneously, and inspect the hardest examples on which most or all classifiers fail. This analysis serves two purposes: it explains the mixed effectiveness of the tested voting schemes and provides a design rationale for more selective hybrid strategies such as confidence-based escalation.
+
+\subsection{Error Overlap Within and Across Model Families}
+
+The first recurring pattern is that models from the same family tend to fail on the same instances substantially more often than models from different families. Across all datasets, the mean Jaccard similarity of error sets is 0.414 for within-family pairs, compared with only 0.234 for cross-family pairs. This confirms that architectural similarity translates into partially redundant error profiles. The effect is visible in every domain, but is strongest for Yelp-Full, TweetEval-Sentiment, and Twitter, where the average within-family overlap reaches 0.556, 0.519, and 0.472 respectively.
+
+Figure~\ref{fig:mean_pairwise_jaccard} visualises this effect directly. Three blocks are clearly visible: the transformer pair (DistilBERT, DistilRoBERTa), the deep-learning/classical cluster around CNN, SVM, and LSTM, and the LLM cluster formed by Gemini, Llama, and Mistral. By contrast, overlap values between these families are markedly lower, which supports the interpretation that ensemble gains depend on combining models with genuinely different error profiles.
+
+\begin{figure}[!t]
+\centering
+\includegraphics[width=\columnwidth]{../error_analysis/error_analysis/mean_pairwise_jaccard.png}
+\caption{Mean pairwise Jaccard similarity of model error sets, averaged across all datasets. Darker cells indicate stronger overlap in the sets of misclassified samples.}
+\label{fig:mean_pairwise_jaccard}
+\end{figure}
+
+At the level of individual model pairs, the most pronounced overlaps are observed for DistilBERT--DistilRoBERTa on Yelp-Full (0.784), Llama--Mistral on Twitter (0.680), and Gemini--Llama on Twitter (0.613). These values indicate that adding more models from the same family does not necessarily increase ensemble diversity. In other words, a larger ensemble is not automatically a more complementary ensemble.
+
+At the same time, several high-overlap cross-family pairs are also observed, most notably SVM--LSTM on TweetEval-Sentiment (0.611) and CNN--SVM on Finance-66Agree (0.590). This is an important nuance: some examples are difficult not because one model family is uniquely weak, but because the underlying samples are intrinsically ambiguous and induce correlated failures even across heterogeneous architectures.
+
+\begin{table}[!t]
+\centering
+\footnotesize
+\caption{Error-overlap summary by dataset. ``Within'' and ``Between'' denote the mean pairwise Jaccard similarity of model error sets for pairs from the same family and from different families, respectively. ``Hard'' counts samples misclassified by at least 60\% of models.}
+\label{tab:error_overlap_summary}
+\resizebox{\columnwidth}{!}{%
+\begin{tabular}{|l|c|c|c|c|}
+\hline
+\textbf{Dataset} & \textbf{Within} & \textbf{Between} & \textbf{Hard \%} & \textbf{All-fail \%} \\
+\hline
+Finance-50Agree        & 0.401 & 0.228 & 8.25  & 0.62 \\
+Finance-66Agree        & 0.383 & 0.201 & 5.81  & 0.24 \\
+Finance-75Agree        & 0.324 & 0.141 & 2.46  & 0.14 \\
+Finance-All-Agree      & 0.308 & 0.106 & 1.10  & 0.00 \\
+IMDB                   & 0.372 & 0.178 & 2.62  & 0.50 \\
+TweetEval-Irony        & 0.389 & 0.249 & 13.11 & 0.29 \\
+TweetEval-Sentiment    & 0.519 & 0.344 & 21.39 & 3.37 \\
+Twitter                & 0.472 & 0.234 & 12.59 & 1.10 \\
+Yelp-Full              & 0.556 & 0.429 & 32.84 & 7.88 \\
+\hline
+\end{tabular}%
+}
+\end{table}
+
+\subsection{Dataset Difficulty and Hard Examples}
+
+Table~\ref{tab:error_overlap_summary} also reveals large differences in dataset-level difficulty. Yelp-Full is the most challenging corpus by a wide margin: 32.84\% of samples are misclassified by at least 60\% of models, and 7.88\% are misclassified by all nine classifiers simultaneously. TweetEval-Sentiment ranks second, with 21.39\% hard samples and 3.37\% all-fail cases. In contrast, the finance datasets-particularly Finance-All-Agree-contain relatively few universally difficult examples. This helps explain why the finance corpora benefit the most from aggregation: there are enough disagreements to exploit, but comparatively fewer samples on which the entire pool fails together.
+
+The qualitative analysis of the hardest samples indicates that the most problematic cases are linguistically and semantically non-trivial. In TweetEval-Irony and TweetEval-Sentiment, many all-fail examples rely on polarity reversal, sarcasm, understatement, or sentiment expressed through pragmatics rather than explicit lexical cues. In Yelp-Full, the hardest reviews are typically long, mixed-polarity texts that combine praise and criticism and require fine-grained rating decisions rather than binary sentiment detection. The Twitter corpus introduces a different source of difficulty: short, noisy, context-poor posts containing placeholders, slang, or fragmentary utterances. These observations suggest that large-scale error overlap is often driven by genuine ambiguity of the input rather than by isolated model weaknesses.
+
+\subsection{Implications for Hybrid System Design}
+
+The error-overlap analysis has direct consequences for the design of hybrid sentiment classifiers. First, high within-family overlap implies diminishing returns from combining multiple similar models, since they frequently contribute redundant mistakes. Second, the existence of hard examples shared across nearly all architectures shows why fixed voting over a static pool cannot always outperform the best individual model: when most models fail on the same sample, majority aggregation has little corrective capacity.
+
+These findings motivate a more selective hybrid strategy than uniform voting. The results reported in Section~\ref{sec:cross_ensemble} already suggest that the best model family is dataset-dependent: transformers dominate on the finance corpora, LLMs are strongest on IMDB and TweetEval-Irony, and deep learning models are clearly superior on Twitter. Rather than treating all predictions as equally useful, future hybrid methods should take into account both expected model quality and the degree of error correlation between model families. In this sense, error-overlap analysis is not only descriptive; it helps identify the conditions under which more adaptive hybrid architectures may be worth exploring.
 
 \bibliographystyle{IEEEtran}
 \bibliography{bibliography}
