@@ -17,3 +17,5 @@ twitter,distilroberta-base,0.8002276226819308,0.7906099523300419
 twitter,distilbert-base-uncased,0.833969337885787,0.8276198369241727
 imdb,distilroberta-base,0.9297,0.9296839672413707
 imdb,distilbert-base-uncased,0.921,0.9209911225625311
+yelp_full,distilbert-base-uncased,0.60025,0.5989432337621416
+yelp_full,distilroberta-base,0.6205,0.621297190868285
