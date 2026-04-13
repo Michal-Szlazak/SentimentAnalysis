@@ -502,7 +502,20 @@ The error-overlap analysis has direct consequences for the design of hybrid sent
 These findings motivate a more selective hybrid strategy than uniform voting. The results reported in Section~\ref{sec:cross_ensemble} already suggest that the best model family is dataset-dependent: transformers dominate on the finance corpora, LLMs are strongest on IMDB and TweetEval-Irony, and deep learning models are clearly superior on Twitter. Rather than treating all predictions as equally useful, future hybrid methods should take into account both expected model quality and the degree of error correlation between model families. In this sense, error-overlap analysis is not only descriptive; it helps identify the conditions under which more adaptive hybrid architectures may be worth exploring.
 
 \section{Summary}
-// TODO
+
+This benchmarking study provides a multidimensional evaluation of sentiment classification architectures, ranging from classical support vector machines to state-of-the-art large language models. Our results lead to four primary conclusions regarding the current state of automated sentiment analysis:
+
+\begin{enumerate}
+    \item \textbf{Domain Sensitivity over Model Scale}: While Large Language Models like Gemini and Llama-4 demonstrate superior performance on linguistically complex tasks such as irony detection and long-form movie reviews, they are frequently outperformed by task-specific architectures (CNNs and LSTMs) on noisy, colloquial datasets like Twitter. This suggests that "scaling up" is not a universal solution for all sentiment domains.
+
+    \item \textbf{Hybrid Confidence-based Voting Framework}: We demonstrated that a hierarchical confidence-based voting framework - routing "easy" samples to SVMs and "hard" cases to Gemini - can significantly reduce computational overhead and API costs. By utilizing a confidence threshold of 0.90, we maintained competitive accuracy while offloading the majority of the workload to efficient, non-generative models.
+
+    \item \textbf{Cross-model Ensemble}: Our cross-model ensemble analysis reveals that the most effective voting systems are those that combine heterogeneous architectures. Because models within the same family (e.g., LLMs or Transformers) have high error overlap (Jaccard similarity $> 0.4$), ensemble gains are maximized when pooling predictions across different families rather than simply stacking more models of the same type.
+
+    \item \textbf{Dataset Resilience}: The finance and IMDB datasets proved to be the most "correctable" through voting, whereas social media data (Yelp-Full and Twitter) exhibited high rates of "all-fail" samples. This indicates that current bottlenecks in sentiment analysis are often driven by inherent linguistic ambiguity and labeling noise rather than specific model architectural failures.
+\end{enumerate}
+
+In conclusion, the optimal deployment strategy for sentiment analysis remains highly context-dependent.
 
 \bibliographystyle{IEEEtran}
 \bibliography{bibliography}
