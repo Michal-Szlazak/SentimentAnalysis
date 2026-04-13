@@ -36,24 +36,154 @@ Warsaw, Poland}
 \IEEEauthorblockA{\textit{Faculty of Electrical Engineering} \\
 \textit{Warsaw University of Technology}\\
 Warsaw, Poland}
+\and
+\IEEEauthorblockN{4\textsuperscript{th} Marek Wdowiak}
+\IEEEauthorblockA{\textit{Institute of Theoretical Electrical Engineering and Information-Measurement System} \\
+\textit{Warsaw University of Technology}\\
+Warsaw, Poland}
 }
 
 \maketitle
 
 \begin{abstract}
-TODO
+The evolution of Natural Language Processing has introduced a wide range of methods for sentiment analysis, ranging from traditional statistical classifiers to advanced Large Language Models. While LLMs demonstrate strong reasoning capabilities, their practical application is often challenged by computational costs and latency. This research presents a comprehensive comparative analysis of sentiment analysis techniques across a range of approaches, including lexicon-based methods, classical machine learning, encoder-only Transformers (BERT, RoBERTa), and modern generative models such as Gemini.
+
+The study uses six distinct datasets - including Twitter, IMDB reviews, SemEval benchmarks, Yelp, and the Financial PhraseBank - to evaluate model robustness across varying linguistic styles, from noisy social media content to formal financial reports. A central focus of this work is the exploration of hybrid strategies designed to combine the strengths of different model tiers. By implementing multi-stage decision-making frameworks, the research investigates how model consensus, uncertainty-driven escalation, and collaborative voting can enhance classification precision while managing resource allocation.
+
+This paper evaluates cascading workflows in which smaller, specialized models interact with high-parameter LLMs to improve classification accuracy, particularly in resolving linguistic ambiguities such as irony and sarcasm. The study contributes to the development of more effective sentiment analysis pipelines, providing insights into how hybrid architectures can achieve higher predictive performance than individual models in complex, real-world data environments. 
 \end{abstract}
 
 \begin{IEEEkeywords}
-TODO
+Sentiment Analysis, Large Language Models,
+Transformer Architectures, Hybrid NLP Systems
 \end{IEEEkeywords}
 
 \section{Introduction}
 TODO + sample citation
 \cite{liskowski2026large}
 
-\section{Chosen datasets}
-TODO
+\section{Related Work}
+
+Sentiment analysis (SA) has been an active research area for over two decades, and the approaches used have changed significantly as new machine learning techniques emerged. Early systems relied on hand-crafted lexicons and rule-based methods. VADER \cite{hutto2014vader}, for example, uses a curated list of words combined with grammatical rules to score social media text without any training data. Classical supervised methods such as Support Vector Machines with TF-IDF features later became strong baselines across many domains \cite{singh2020sentiment}.
+
+The introduction of deep learning brought convolutional and recurrent architectures that could capture local patterns and sequential context in text. Transformer-based models, most notably BERT and its variants, pushed performance higher by leveraging large-scale pre-training, enabling fine-tuned models to reach state-of-the-art results on standard SA benchmarks \cite{sharma2025review}.
+
+More recently, Large Language Models have been evaluated as zero-shot or few-shot sentiment classifiers, removing the need for task-specific fine-tuning. \cite{zhang2024sentiment} show that LLMs are competitive with fine-tuned models on many benchmarks but still fall short in specific domains. Jan Ole Krugmann \cite{sa-in-age-of-genai} further demonstrate that generative models can be sensitive to prompt formulation and may refuse certain types of content. Multi-agent and voting-based approaches \cite{sun2023sentiment} have been proposed to reduce this instability. Our work extends these lines of research by providing a systematic cross-domain comparison of all three paradigms classical ML, transformers, and LLMs and by exploring ensemble and confidence-based combination strategies.
+
+\section{Chosen Datasets}
+\label{sec:datasets}
+
+To cover a wide range of domains, text styles, and label granularities, we selected six publicly available sentiment datasets resulting in nine distinct dataset configurations. Table~\ref{tab:datasets} summarises their key properties.
+
+\begin{table}[H]
+\centering
+\footnotesize
+\caption{Overview of datasets used in experiments.}
+\label{tab:datasets}
+\resizebox{\columnwidth}{!}{%
+\begin{tabular}{|l|l|c|r|}
+\hline
+\textbf{Dataset} & \textbf{Domain} & \textbf{Classes} & \textbf{Test size} \\
+\hline
+IMDB                       & Movie reviews    & 2 & 10{,}000 \\
+Financial PhraseBank (×4)  & Financial news   & 3 & varies   \\
+Twitter Entity             & Social media     & 3 & 15{,}000  \\
+Yelp                       & Restaurant reviews & 5 & 5{,}000 \\
+TweetEval Sentiment        & Social media     & 3 & 15{,}000  \\
+TweetEval Irony            & Social media     & 2 & 1{,}800      \\
+\hline
+\end{tabular}
+}
+\end{table}
+
+\textbf{IMDB Large Movie Review Dataset} \cite{maas2011imdb} contains 50{,}000 movie reviews split evenly into training and test sets. Each review is labelled as either positive or negative. The dataset is well-studied and represents a relatively clean, long-form binary classification task.
+
+\textbf{Financial PhraseBank} \cite{malo2014phrasebank} consists of 13{,}000 sentences extracted from financial news articles and annotated by 16 domain experts as positive, negative, or neutral. The dataset is available in four subsets defined by the minimum annotator agreement required to include a sentence: 50\%, 66\%, 75\%, and 100\% (all-agree). Higher agreement thresholds produce smaller but less ambiguous subsets. We evaluated on all four subsets to examine how label quality affects model performance.
+
+\textbf{Twitter Entity Sentiment Analysis} \cite{twitter_kaggle} is a Kaggle dataset of tweets labelled with four categories: positive, negative, neutral, and irrelevant. Tweets are short and informal, which makes this dataset a challenging benchmark for models trained primarily on longer, cleaner text.
+
+\textbf{Yelp} \cite{zhang2015character} contains customer reviews from the Yelp platform with ratings on a five-point scale (1-5 stars). We use a subset of the full dataset with 30{,}000 training and 5{,}000 test samples, it is the only dataset with five sentiment classes, making it particularly useful for evaluating fine-grained sentiment discrimination.
+
+\textbf{TweetEval Sentiment and TweetEval Irony} \cite{barbieri2020tweeteval} are part of the TweetEval unified benchmark for tweet classification. The sentiment subset uses three classes (negative, neutral, positive) and the irony subset is binary (ironic vs.\ non-ironic). Including the irony task helps us check if models can understand more subtle language, not just basic positive or negative sentiment.
+
+\section{Methodology}
+\label{sec:methodology}
+
+This section describes the models, experimental setup, and evaluation procedures used to conduct a unified comparison of sentiment analysis approaches across multiple domains.
+
+\subsection{Model Families}
+
+We evaluate nine models from major paradigms: lexicon-based methods, classical machine learning, deep learning, transformer-based architectures, and large language models (LLMs). This diverse selection enables analysis of complementary strengths and failure modes.
+
+\textbf{Lexicon-based model:}  
+We include VADER, a rule-based sentiment analyzer that relies on a curated lexicon and heuristic rules. It serves as a lightweight baseline requiring no training.
+
+\textbf{Classical machine learning:}  
+We use a TF-IDF vectorizer combined with a Support Vector Machine (SVM) classifier. This approach represents text as sparse features and has historically been a strong baseline for sentiment classification.
+
+\textbf{Deep learning models:}  
+We evaluate two neural architectures:
+\begin{itemize}
+\item \textbf{CNN}: captures local n-gram patterns via convolutional filters.
+\item \textbf{LSTM}: models sequential dependencies and contextual information in text.
+\end{itemize}
+
+\textbf{Transformer-based models:}  
+We include DistilBERT and DistilRoBERTa, which are lightweight variants of large pretrained transformers. These models are fine-tuned on each dataset and represent the state of the art in supervised sentiment analysis.
+
+\textbf{Large Language Models (LLMs):}  
+We evaluate three instruction-tuned LLMs accessed via API:
+\begin{itemize}
+\item Gemini (gemini-2.5-flash)
+\item Mistral (mistral-small-2503)
+\item Llama (llama-4-maverick-17b-128e-instruct)
+\end{itemize}
+These models are used in a zero-shot or few-shot setting without task-specific fine-tuning.
+
+\subsection{Evaluation Metrics}
+
+We evaluate model performance using two standard metrics:
+
+\textbf{Accuracy} measures the proportion of correctly classified samples:
+\[
+\text{Accuracy} = \frac{\text{Number of correct predictions}}{\text{Total number of samples}}
+\]
+
+\textbf{Macro-averaged F1-score} accounts for class imbalance by computing the F1-score independently for each class and averaging the results:
+\[
+F1_{\text{macro}} = \frac{1}{C} \sum_{i=1}^{C} F1_i
+\]
+where $C$ is the number of classes.
+
+These metrics provide complementary perspectives: accuracy reflects overall correctness, while macro-F1 ensures that minority classes are treated equally.
+
+\subsection{Ensemble and Hybrid Strategies}
+
+To explore the benefits of combining models, we evaluate several aggregation strategies:
+
+\textbf{Majority voting:}  
+Each model contributes one vote, and the most frequent label is selected.
+
+\textbf{Accuracy-weighted voting:}  
+Votes are weighted by each model's overall accuracy on the dataset.
+
+\textbf{Confidence-weighted voting:}  
+Predictions are weighted by model confidence scores. For LLMs, which do not provide calibrated probabilities, a fallback confidence estimate is used.
+
+\textbf{Confidence-based hybrid pipeline:}  
+Models are organized in a hierarchical sequence from low-cost to high-cost (SVM $\rightarrow$ CNN $\rightarrow$ LSTM $\rightarrow$ transformer $\rightarrow$ LLM). A sample is classified by the first model whose confidence exceeds a predefined threshold; otherwise, it is passed to the next model in the chain.
+
+This design allows efficient allocation of computational resources while preserving accuracy on difficult examples.
+
+\subsection{Error Analysis Methodology}
+
+To better understand model behavior, we perform an error-overlap analysis based on the Jaccard similarity of misclassified sample sets. For two models $A$ and $B$, the similarity is defined as:
+\[
+J(A, B) = \frac{|E_A \cap E_B|}{|E_A \cup E_B|}
+\]
+where $E_A$ and $E_B$ are the sets of samples misclassified by each model.
+
+We also identify \textit{hard samples}, defined as those misclassified by at least 60\% of models, and \textit{all-fail samples}, misclassified by all models. These metrics provide insight into dataset difficulty and the limits of ensemble methods.
 
 \section{LLM-Based Sentiment Classification Setup}
 The inference pipeline was designed to evaluate the capabilities of state-of-the-art LLMs in a controlled, reproducible environment. All models were accessed through the \textbf{Google Cloud Vertex AI API}, which provided a unified infrastructure for request management and model serving. We utilized three distinct architectures:
@@ -338,7 +468,7 @@ The lower accuracy observed in the terminal model (Gemini) across specific datas
 \section{Cross-Model Ensemble Voting}
 \label{sec:cross_ensemble}
 
-The LLM-only voting framework presented in Section~IV demonstrates the potential of prediction aggregation, but it leaves an open question: does incorporating the full spectrum of model families-classical ML, deep learning, transformers, and LLMs-yield further improvements? To answer this, we extend the voting framework to all nine architectures evaluated in this benchmark: DistilBERT, DistilRoBERTa, CNN, VADER, TF-IDF\,+\,SVM, LSTM, Gemini, Llama, and Mistral. The motivation is that heterogeneous models exhibit complementary failure modes and, when combined, can compensate for each other's systematic biases.
+The LLM-only voting framework demonstrates the potential of prediction aggregation, but it leaves an open question: does incorporating the full spectrum of model families, classical ML, deep learning, transformers, and LLMs-yield further improvements? To answer this, we extend the voting framework to all nine architectures evaluated in this benchmark. The motivation is that different models make different mistakes, so when used together, they can balance out each other’s weaknesses.
 
 \subsection{Voting Strategies and Implementation}
 We evaluate four ensemble strategies applied row-by-row across the nine models:
@@ -353,7 +483,7 @@ Accuracy-weighted voting was also evaluated with softmax-normalised weights, but
 
 \subsection{Individual Model Performance}
 
-Table~\ref{tab:all_models_acc} reports the accuracy of each model across all nine datasets. Several domain-dependent patterns are immediately apparent. The DistilRoBERTa transformer is the strongest single model on the finance corpora, where fine-tuned language representations provide a clear advantage. Gemini leads on IMDB and TweetEval-Irony-tasks that benefit from broad world knowledge and nuanced semantic understanding. Conversely, on the Twitter dataset, the CNN and LSTM architectures outperform both transformers and LLMs by a notable margin; the concise, colloquial nature of tweets appears to favour pattern-based feature extractors over deep generative priors. VADER is consistently the weakest classifier across all domains, with near-chance performance on multi-class datasets such as Twitter (0.220) and Yelp-Full (0.300).
+Table~\ref{tab:all_models_acc} reports the accuracy of each model across all nine datasets. Several domain-dependent patterns are immediately apparent. The DistilRoBERTa transformer is the strongest single model on the finance dataset, where fine-tuned language representations provide a clear advantage. Gemini performs best on IMDB and TweetEval-Irony, tasks that rely on broad world knowledge and subtle language understanding. In contrast, on the Twitter dataset, the simpler CNN and LSTM models outperform both transformers and large language models by a wide margin; short, informal tweets seem to favour models that detect surface-level patterns rather than those relying on deep generative representations. VADER is the weakest model in every setting, scoring close to random on multi-class datasets like Twitter (0.220) and Yelp-Full (0.300).
 
 \begin{table*}[t]
 \centering
@@ -411,37 +541,9 @@ Confidence-weighted voting is the most reliable ensemble strategy, achieving the
 
 \subsection{Domain-Specific Effects of LLM Inclusion}
 
-The Twitter dataset exposes a critical failure mode: all three LLMs score between 0.515 and 0.573, far below CNN (0.866) and LSTM (0.853). The source of this discrepancy is the Twitter dataset's three-class labeling scheme based on emotional intensity rather than simple sentiment polarity-a distinction that LLMs, trained on broad world knowledge, handle less reliably than task-specific classifiers. When LLMs are included in the majority vote, their poorly calibrated predictions drown out the signal from stronger models. Excluding them (Majority Voting, no LLM) recovers a gain of +2.5 pp over the best individual model, a result consistent with the findings of \cite{sa-in-age-of-genai} that generative models do not universally generalise across sentiment labeling conventions.
+The Twitter dataset exposes LLM limitations: all three LLMs score between 0.515 and 0.573, far below CNN (0.866) and LSTM (0.853). This difference is caused by the Twitter dataset's four-class labeling scheme based on emotional intensity rather than simple sentiment polarity-a distinction that LLMs, trained on broad world knowledge, handle less reliably than task-specific classifiers. When LLMs are included in the majority vote, their poorly calibrated predictions drown out the signal from stronger models. Excluding them (Majority Voting, no LLM) recovers a gain of +2.5 pp over the best individual model, a result consistent with the findings of \cite{sa-in-age-of-genai} which show that generative models do not always generalise well across different sentiment labeling schemes.
 
-On the finance corpora the relationship reverses: LLMs rank among the top three models, and including them in confidence-weighted voting is beneficial. This suggests that the optimal ensemble composition is task-dependent: LLMs should be included when their domain competence is confirmed, and excluded otherwise.
-
-\subsection{Model Disagreement and Ensemble Effectiveness}
-
-To understand when ensembles provide the greatest benefit, we compute the \emph{disagreement rate}-the proportion of samples for which not all models agree on the predicted label. Table~\ref{tab:disagreement} reports this metric per dataset alongside the confidence-weighted accuracy gain.
-
-\begin{table}[H]
-\centering
-\footnotesize
-\caption{Model disagreement rate and conf.-weighted accuracy gain ($\Delta$ vs.\ best individual).}
-\label{tab:disagreement}
-\begin{tabular}{|l|c|c|}
-\hline
-\textbf{Dataset}    & \textbf{Disagr. Rate} & \textbf{Conf-W $\Delta$} \\
-\hline
-Twitter             & 97.4\% & $+$0.003 \\
-TE-Irony            & 89.0\% & $-$0.050 \\
-TE-Sentiment        & 80.6\% & $+$0.017 \\
-Yelp-Full           & 84.4\% & $-$0.007 \\
-Finance-50          & 76.9\% & $-$0.002 \\
-Finance-66          & 66.4\% & $+$0.028 \\
-Finance-All         & 62.5\% & $+$0.009 \\
-Finance-75          & 61.5\% & $+$0.026 \\
-IMDB                & 45.9\% & $+$0.001 \\
-\hline
-\end{tabular}
-\end{table}
-
-A high disagreement rate does not, by itself, predict ensemble gains: Twitter and TweetEval-Irony are among the most contentious datasets yet both show no or negative gains when all models are pooled. The critical factor is whether the disagreeing models are wrong \emph{in different ways}. On the finance corpora, heterogeneous models systematically err on different samples, and majority aggregation corrects individual mistakes. On Twitter and Yelp-Full, the LLMs are biased toward incorrect labels in a correlated fashion, so aggregation compounds rather than corrects the error. This reinforces the importance of model selection as a prerequisite to ensemble construction.
+On the finance datasets, the relationship reverses: LLMs rank among the top three models, and including them in confidence-weighted voting is beneficial. This suggests that the optimal ensemble composition is task-dependent: LLMs should be included when their domain competence is confirmed, and excluded otherwise.
 
 \section{Cross-Model Error Overlap Analysis}
 \label{sec:error_overlap}
@@ -454,12 +556,12 @@ The first recurring pattern is that models from the same family tend to fail on 
 
 Figure~\ref{fig:mean_pairwise_jaccard} visualises this effect directly. Three blocks are clearly visible: the transformer pair (DistilBERT, DistilRoBERTa), the deep-learning/classical cluster around CNN, SVM, and LSTM, and the LLM cluster formed by Gemini, Llama, and Mistral. By contrast, overlap values between these families are markedly lower, which supports the interpretation that ensemble gains depend on combining models with genuinely different error profiles.
 
-\begin{figure}[!t]
-\centering
-\includegraphics[width=\columnwidth]{../error_analysis/error_analysis/mean_pairwise_jaccard.png}
-\caption{Mean pairwise Jaccard similarity of model error sets, averaged across all datasets. Darker cells indicate stronger overlap in the sets of misclassified samples.}
-\label{fig:mean_pairwise_jaccard}
-\end{figure}
+% \begin{figure}[!t]
+% \centering
+% \includegraphics[width=\columnwidth]{../error_analysis/error_analysis/mean_pairwise_jaccard.png}
+% \caption{Mean pairwise Jaccard similarity of model error sets, averaged across all datasets. Darker cells indicate stronger overlap in the sets of misclassified samples.}
+% \label{fig:mean_pairwise_jaccard}
+% \end{figure}
 
 At the level of individual model pairs, the most pronounced overlaps are observed for DistilBERT--DistilRoBERTa on Yelp-Full (0.784), Llama--Mistral on Twitter (0.680), and Gemini--Llama on Twitter (0.613). These values indicate that adding more models from the same family does not necessarily increase ensemble diversity. In other words, a larger ensemble is not automatically a more complementary ensemble.
 
@@ -502,7 +604,19 @@ The error-overlap analysis has direct consequences for the design of hybrid sent
 These findings motivate a more selective hybrid strategy than uniform voting. The results reported in Section~\ref{sec:cross_ensemble} already suggest that the best model family is dataset-dependent: transformers dominate on the finance corpora, LLMs are strongest on IMDB and TweetEval-Irony, and deep learning models are clearly superior on Twitter. Rather than treating all predictions as equally useful, future hybrid methods should take into account both expected model quality and the degree of error correlation between model families. In this sense, error-overlap analysis is not only descriptive; it helps identify the conditions under which more adaptive hybrid architectures may be worth exploring.
 
 \section{Summary}
-// TODO
+This benchmarking study provides a multidimensional evaluation of sentiment classification architectures, ranging from classical support vector machines to state-of-the-art large language models. Our results lead to four primary conclusions regarding the current state of automated sentiment analysis:
+
+\begin{enumerate}
+    \item \textbf{Domain Sensitivity over Model Scale}: While Large Language Models like Gemini and Llama-4 demonstrate superior performance on linguistically complex tasks such as irony detection and long-form movie reviews, they are frequently outperformed by task-specific architectures (CNNs and LSTMs) on noisy, colloquial datasets like Twitter. This suggests that "scaling up" is not a universal solution for all sentiment domains.
+
+    \item \textbf{Hybrid Confidence-based Voting Framework}: We demonstrated that a hierarchical confidence-based voting framework - routing "easy" samples to SVMs and "hard" cases to Gemini - can significantly reduce computational overhead and API costs. By utilizing a confidence threshold of 0.90, we maintained competitive accuracy while offloading the majority of the workload to efficient, non-generative models.
+
+    \item \textbf{Cross-model Ensemble}: Our cross-model ensemble analysis reveals that the most effective voting systems are those that combine heterogeneous architectures. Because models within the same family (e.g., LLMs or Transformers) have high error overlap (Jaccard similarity $> 0.4$), ensemble gains are maximized when pooling predictions across different families rather than simply stacking more models of the same type.
+
+    \item \textbf{Dataset Resilience}: The finance and IMDB datasets proved to be the most "correctable" through voting, whereas social media data (Yelp-Full and Twitter) exhibited high rates of "all-fail" samples. This indicates that current bottlenecks in sentiment analysis are often driven by inherent linguistic ambiguity and labeling noise rather than specific model architectural failures.
+\end{enumerate}
+
+In conclusion, the optimal deployment strategy for sentiment analysis remains highly context-dependent.
 
 \bibliographystyle{IEEEtran}
 \bibliography{bibliography}
