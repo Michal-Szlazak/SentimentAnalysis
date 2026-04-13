@@ -150,20 +150,7 @@ These models are used in a few-shot setting without task-specific fine-tuning.
 
 \subsection{Evaluation Metrics}
 
-We evaluate model performance using two standard metrics:
-
-\textbf{Accuracy} measures the proportion of correctly classified samples:
-\[
-\text{Accuracy} = \frac{\text{Number of correct predictions}}{\text{Total number of samples}}
-\]
-
-\textbf{Macro-averaged F1-score} accounts for class imbalance by computing the F1-score independently for each class and averaging the results:
-\[
-F1_{\text{macro}} = \frac{1}{C} \sum_{i=1}^{C} F1_i
-\]
-where $C$ is the number of classes.
-
-These metrics provide complementary perspectives: accuracy reflects overall correctness, while macro-F1 ensures that minority classes are treated equally.
+We evaluate model performance using two standard metrics: \textbf{Accuracy} and \textbf{Macro-averaged F1-score}. These metrics provide complementary perspectives: accuracy reflects overall correctness, while macro-F1 ensures that minority classes are treated equally.
 
 \subsection{Ensemble and Hybrid Strategies}
 
@@ -193,7 +180,7 @@ where $E_A$ and $E_B$ are the sets of samples misclassified by each model.
 
 We also identify \textit{hard samples}, defined as those misclassified by at least 60\% of models, and \textit{all-fail samples}, misclassified by all models. These metrics provide insight into dataset difficulty and the limits of ensemble methods.
 
-\section{LLM-Based Sentiment Classification Setup}
+\subsection{LLM-Based Sentiment Classification Setup}
 The classification setup was designed to evaluate the capabilities of state-of-the-art LLMs. All models were accessed through the Google Cloud Vertex AI API, which provided a unified infrastructure for request management and model serving. The study included three models:
 \begin{itemize}
     \item \textbf{Gemini}: gemini-2.5-flash,
@@ -202,7 +189,7 @@ The classification setup was designed to evaluate the capabilities of state-of-t
 \end{itemize}
 
 The classification process was handled by a Python-based integration layer, and outputs were stored in structured JSONL format to keep predictions aligned with ground-truth labels through unique sample indices.
-\subsection{Prompt Engineering and In-Context Learning}
+\subsubsection{Prompt Engineering and In-Context Learning}
 To reduce variation across model responses, a standardized five-part prompt structure was used. It was designed to give the models clear task instructions and a consistent input format:
 \begin{itemize}
 \item \textbf{System Role}: Sets the model's role as a sentiment classifier,
@@ -214,7 +201,7 @@ To reduce variation across model responses, a standardized five-part prompt stru
 
 \vspace{-0.6em}
 
-\subsection{Error Handling and Retries}
+\subsubsection{Error Handling and Retries}
 Large-scale API-based inference introduces challenges regarding rate limits and safety-alignment triggers. During the initial pass, we observed a non-negligible rate of unclassified examples (Table~\ref{tab:unclassified_by_model}), primarily due to:
 \begin{enumerate}
     \item \textbf{Rate Limiting}: Exceeding tokens-per-minute (TPM) or requests-per-minute (RPM) quotas,
