@@ -50,7 +50,7 @@ The evolution of Natural Language Processing has introduced a wide range of meth
 
 The study uses six distinct datasets - including Twitter, IMDB reviews, TweeEval benchmarks, Yelp, and the Financial PhraseBank - to evaluate model robustness across varying linguistic styles, from noisy social media content to formal financial reports. A central focus of this work is the exploration of hybrid strategies designed to combine the strengths of different model tiers. By implementing multi-stage decision-making frameworks, the research investigates how model consensus, uncertainty-driven escalation, and collaborative voting can enhance classification precision while managing resource allocation.
 
-This paper evaluates cascading workflows in which smaller, specialized models interact with high-parameter LLMs to improve classification accuracy, particularly in resolving linguistic ambiguities such as irony. The study contributes to the development of more effective sentiment analysis pipelines, providing insights into how hybrid architectures can achieve higher predictive performance than individual models in complex, real-world data environments. 
+This paper evaluates cascading workflows in which smaller, specialized models interact with high-parameter LLMs to improve classification accuracy, particularly in resolving linguistic ambiguities such as irony. The study contributes to the development of more effective sentiment analysis pipelines, providing insights into how hybrid architectures can achieve higher predictive performance than individual models in complex, real-world data environments.
 \end{abstract}
 
 \begin{IEEEkeywords}
@@ -123,23 +123,23 @@ TweetEval Irony            & Social media     & 2 & 1{,}800      \\
 
 We evaluate nine models across five paradigms: lexicon-based, classical ML, deep learning, transformer-based, and LLMs.
 
-\textbf{Lexicon-based model:}  
+\textbf{Lexicon-based model:}
 We include VADER, a rule-based sentiment analyzer that relies on a curated lexicon and heuristic rules. It serves as a lightweight baseline requiring no training.
 
-\textbf{Classical machine learning:}  
+\textbf{Classical machine learning:}
 We use a TF-IDF vectorizer combined with a Support Vector Machine (SVM) classifier. This approach represents text as sparse features and has historically been a strong baseline for sentiment classification.
 
-\textbf{Deep learning models:}  
+\textbf{Deep learning models:}
 We evaluate two neural architectures:
 \begin{itemize}
 \item \textbf{CNN}: captures local n-gram patterns via convolutional filters.
 \item \textbf{LSTM}: models sequential dependencies and contextual information in text.
 \end{itemize}
 
-\textbf{Transformer-based models:}  
+\textbf{Transformer-based models:}
 We include DistilBERT and DistilRoBERTa, which are lightweight variants of large pretrained transformers. These models are fine-tuned on each dataset and represent the state of the art in supervised sentiment analysis.
 
-\textbf{Large Language Models (LLMs):}  
+\textbf{Large Language Models (LLMs):}
 We evaluate three instruction-tuned LLMs accessed via API:
 \begin{itemize}
 \item Gemini (gemini-2.5-flash)
@@ -156,16 +156,16 @@ We evaluate model performance using two standard metrics: \textbf{Accuracy} and 
 
 To explore the benefits of combining models, we evaluate several aggregation strategies:
 
-\textbf{Majority voting:}  
+\textbf{Majority voting:}
 Each model contributes one vote, and the most frequent label is selected.
 
-\textbf{Accuracy-weighted voting:}  
+\textbf{Accuracy-weighted voting:}
 Votes are weighted by each model's overall accuracy on the dataset.
 
-\textbf{Confidence-weighted voting:}  
+\textbf{Confidence-weighted voting:}
 Predictions are weighted by model confidence scores. For LLMs, which do not provide calibrated probabilities, a fallback confidence estimate is used if needed (for example, overall accuracy on the dataset).
 
-\textbf{Confidence-based hybrid pipeline:}  
+\textbf{Confidence-based hybrid pipeline:}
 Models are organized in a hierarchical sequence from low-cost to high-cost (SVM $\rightarrow$ CNN $\rightarrow$ LSTM $\rightarrow$ transformer $\rightarrow$ LLM). A sample is classified by the first model whose confidence exceeds a predefined threshold; otherwise, it is passed to the next model in the chain.
 
 This design allows efficient allocation of computational resources while preserving accuracy on difficult examples.
@@ -327,7 +327,7 @@ The experiments demonstrate that while individual Large Language Models are high
 
 However, we observed that on noisier data (e.g., social media), simple voting does not always outperform the best single model. It is important to note that the results presented here are highly dependent on the quality of the instructions provided to the models. Further refinement of prompt engineering-specifically through better selection of few-shot examples and more detailed category descriptions-could likely lead to even higher classification accuracy across all tested domains.
 
-\section{Multi-Model Confidence Voting}
+\section{Multi-Model Confidence-based Hybrid Pipeline}
 In real-world applications of sentiment analysis, predictive performance is not the sole consideration. Operational efficiency - specifically the costs associated with hardware requirements and inference throughput - is equally critical. Large Language Models (LLMs) and other Transformer-based architectures, such as BERT or RoBERTa, are significantly more resource-intensive than traditional approaches like Convolutional Neural Networks (CNNs) \cite{zhang2024sentiment,sa-in-age-of-genai}.
 
 To mitigate these costs, a hybrid framework is proposed to maximize the utilization of computationally efficient models for trivial cases while reserving more powerful models for challenging ones. The proposed system utilizes the confidence scores produced by each model during inference. Models are organized hierarchically, from the least to the most computationally expensive:
@@ -344,29 +344,30 @@ The framework was evaluated using three confidence thresholds: 0.90, 0.95, and 0
 \begin{table}[H]
 \centering
 \scriptsize
-\caption{Per-dataset accuracy of Multi-Model Confidence Voting with different thresholds.}
+\caption{Per-dataset accuracy of Multi-Model Confidence-based Hybrid Pipeline with different thresholds.}
 \label{tab:confidence_voting_results}
 \resizebox{\columnwidth}{!}{%
-\begin{tabular}{|l|c|c|c|}
+\begin{tabular}{|l|c|c|c|c|}
 \hline
-\textbf{Dataset} & \textbf{0.90} & \textbf{0.95} & \textbf{0.98} \\
+\textbf{Dataset} & \textbf{0.90} & \textbf{0.95} & \textbf{0.98} & \textbf{Best single model} \\
 
 \hline
-twitter              & \best{0.856} & 0.824 & 0.766 \\
-imdb                 & 0.925 & 0.938 & \best{0.948} \\
-finance\_50agree     & \best{0.854} & 0.851 & 0.830 \\
-finance\_66agree     & 0.892 & 0.902 & \best{0.906} \\
-finance\_75agree     & 0.931 & 0.944 &\best{0.952} \\
-finance\_all\_agree  & \best{0.945} & 0.923 & 0.815 \\
-yelp\_full           & \best{0.626} & 0.624 & 0.623 \\
-tweet\_eval\_sentiment & \best{0.691} & 0.688 & 0.683 \\
-tweet\_eval\_irony   & 0.790 & \best{0.811} & 0.810 \\
+twitter              & \best{0.856} & 0.824 & 0.766 & 0.866 \\
+imdb                 & 0.925 & 0.938 & \best{0.948} & 0.958 \\
+finance\_50agree     & \best{0.854} & 0.851 & 0.830 & 0.865 \\
+finance\_66agree     & 0.892 & 0.902 & \best{0.906} & 0.884 \\
+finance\_75agree     & 0.931 & 0.944 &\best{0.952} & 0.938 \\
+finance\_all\_agree  & \best{0.945} & 0.923 & 0.815 & 0.971 \\
+yelp\_full           & \best{0.626} & 0.624 & 0.623 & 0.666 \\
+tweet\_eval\_sentiment & \best{0.691} & 0.688 & 0.683 & 0.707 \\
+tweet\_eval\_irony   & 0.790 & \best{0.811} & 0.810 & 0.809 \\
 \hline
 \end{tabular}
 }
 \end{table}
 
 The results indicate that the 0.90 threshold generally yielded the most consistent performance. While the 0.98 threshold outperformed others on specific datasets, it exhibited significant volatility, whereas the 0.90 threshold maintained steady accuracy across all tested environments.
+Additionally, the hybrid pipeline with a 0.90 confidence threshold maintains performance levels highly competitive with the best single model, showing a marginal accuracy trade-off across most datasets while providing significantly more stability than higher threshold configurations.
 
 \begin{table}[H] % Asterisk makes the table span both columns
 \centering
@@ -456,7 +457,7 @@ gemini & 0.847 & 0.577 & 0.932 & 0.600 & 0.992 & 0.620 \\
 }
 \end{table}
 
-Utilization metrics reveal that reliance on expensive models was significantly lower at a 0.90 threshold compared to 0.98. However, in certain datasets where initial model confidence was inherently low, the terminal model was invoked for the majority of cases. Across nearly all datasets and thresholds, the preceding models maintained high accuracy when their confidence exceeded the threshold. This suggests that the proposed confidence-voting hybrid is a viable strategy for optimizing operational costs in large-scale sentiment analysis without compromising long-term accuracy.
+Utilization metrics reveal that reliance on expensive models was significantly lower at a 0.90 threshold compared to 0.98. However, in certain datasets where initial model confidence was inherently low, the terminal model was invoked for the majority of cases. Across nearly all datasets and thresholds, the preceding models maintained high accuracy when their confidence exceeded the threshold. This suggests that the proposed confidence-based hybrid pipeline is a viable strategy for optimizing operational costs in large-scale sentiment analysis without compromising long-term accuracy.
 
 The lower accuracy observed in the terminal model (Gemini) across specific datasets - most notably in the Finance and Twitter subsets - can be attributed to the cascading nature of the framework. Because the preceding models successfully classified 'clear' instances with high confidence, the terminal model was exclusively tasked with the 'residuals': samples characterized by extreme ambiguity, linguistic noise, or domain-specific complexity that challenged all previous architectures in the pipeline.
 
