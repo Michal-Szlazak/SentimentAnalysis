@@ -46,11 +46,11 @@ Warsaw, Poland}
 \maketitle
 
 \begin{abstract}
-The evolution of Natural Language Processing has introduced a wide range of methods for sentiment analysis, ranging from traditional statistical classifiers to advanced Large Language Models. While LLMs demonstrate strong reasoning capabilities, their practical application is often challenged by computational costs and latency. This research presents a comprehensive comparative analysis of sentiment analysis techniques across a range of approaches, including lexicon-based methods, classical machine learning, encoder-only Transformers (BERT, RoBERTa), and modern generative models such as Gemini.
+The evolution of Natural Language Processing has introduced a wide range of methods for sentiment analysis, ranging from traditional statistical classifiers to advanced Large Language Models. While LLMs demonstrate strong reasoning capabilities, their practical application is often challenged by computational costs and latency. This research presents a comprehensive comparative analysis of sentiment analysis techniques across a range of approaches, including lexicon-based methods, classical machine learning, encoder-only Transformers (DistilBERT , DistilRoBERTa), and modern generative models such as Gemini.
 
-The study uses six distinct datasets - including Twitter, IMDB reviews, SemEval benchmarks, Yelp, and the Financial PhraseBank - to evaluate model robustness across varying linguistic styles, from noisy social media content to formal financial reports. A central focus of this work is the exploration of hybrid strategies designed to combine the strengths of different model tiers. By implementing multi-stage decision-making frameworks, the research investigates how model consensus, uncertainty-driven escalation, and collaborative voting can enhance classification precision while managing resource allocation.
+The study uses six distinct datasets - including Twitter, IMDB reviews, TweeEval benchmarks, Yelp, and the Financial PhraseBank - to evaluate model robustness across varying linguistic styles, from noisy social media content to formal financial reports. A central focus of this work is the exploration of hybrid strategies designed to combine the strengths of different model tiers. By implementing multi-stage decision-making frameworks, the research investigates how model consensus, uncertainty-driven escalation, and collaborative voting can enhance classification precision while managing resource allocation.
 
-This paper evaluates cascading workflows in which smaller, specialized models interact with high-parameter LLMs to improve classification accuracy, particularly in resolving linguistic ambiguities such as irony and sarcasm. The study contributes to the development of more effective sentiment analysis pipelines, providing insights into how hybrid architectures can achieve higher predictive performance than individual models in complex, real-world data environments. 
+This paper evaluates cascading workflows in which smaller, specialized models interact with high-parameter LLMs to improve classification accuracy, particularly in resolving linguistic ambiguities such as irony. The study contributes to the development of more effective sentiment analysis pipelines, providing insights into how hybrid architectures can achieve higher predictive performance than individual models in complex, real-world data environments. 
 \end{abstract}
 
 \begin{IEEEkeywords}
@@ -67,8 +67,8 @@ Previous work has already shown the value of these model families, but it often 
 
 This paper addresses that gap. Our contributions are:
 \begin{itemize}
-    \item a multidomain comparison of nine models from four families --- classical ML, deep learning, transformers, and LLMs --- evaluated on six datasets spanning finance, reviews, and social media,
-    \item an evaluation of three hybrid strategies (LLM-only voting, confidence-based hierarchical escalation, and cross-family ensemble voting), with analysis of both performance gains and the cost--quality trade-off,
+    \item a multidomain comparison of nine models from four families: classical ML, deep learning, transformers, and LLMs - evaluated on six datasets spanning finance, reviews, and social media,
+    \item an evaluation of three hybrid strategies (LLM-only voting, confidence-based hierarchical escalation, and cross-family ensemble voting), with analysis of both performance gains and the cost-quality trade-off,
     \item an error-overlap and hard-example analysis showing when models make complementary errors and when correlated failures limit what aggregation can achieve.
 \end{itemize}
 
@@ -97,7 +97,7 @@ We use six publicly available datasets covering different domains, text styles, 
 \hline
 IMDB                       & Movie reviews    & 2 & 10{,}000 \\
 Financial PhraseBank (×4)  & Financial news   & 3 & varies   \\
-Twitter Entity             & Social media     & 3 & 15{,}000  \\
+Twitter Entity             & Social media     & 4 & 15{,}000  \\
 Yelp                       & Restaurant reviews & 5 & 5{,}000 \\
 TweetEval Sentiment        & Social media     & 3 & 15{,}000  \\
 TweetEval Irony            & Social media     & 2 & 1{,}800      \\
@@ -146,7 +146,7 @@ We evaluate three instruction-tuned LLMs accessed via API:
 \item Mistral (mistral-small-2503)
 \item Llama (llama-4-maverick-17b-128e-instruct)
 \end{itemize}
-These models are used in a zero-shot or few-shot setting without task-specific fine-tuning.
+These models are used in a few-shot setting without task-specific fine-tuning.
 
 \subsection{Evaluation Metrics}
 
@@ -176,7 +176,7 @@ Each model contributes one vote, and the most frequent label is selected.
 Votes are weighted by each model's overall accuracy on the dataset.
 
 \textbf{Confidence-weighted voting:}  
-Predictions are weighted by model confidence scores. For LLMs, which do not provide calibrated probabilities, a fallback confidence estimate is used.
+Predictions are weighted by model confidence scores. For LLMs, which do not provide calibrated probabilities, a fallback confidence estimate is used if needed (for example, overall accuracy on the dataset).
 
 \textbf{Confidence-based hybrid pipeline:}  
 Models are organized in a hierarchical sequence from low-cost to high-cost (SVM $\rightarrow$ CNN $\rightarrow$ LSTM $\rightarrow$ transformer $\rightarrow$ LLM). A sample is classified by the first model whose confidence exceeds a predefined threshold; otherwise, it is passed to the next model in the chain.
@@ -297,7 +297,7 @@ The empirical results indicate that no single model is uniformly dominant across
 \section{Multi-Model Voting and Tie-Breaking Strategy}
 To improve our classifications, we combined the predictions from all three models (Gemini, Llama and Mistral) using a majority voting logic. For every text sample, the final label was chosen based on the most frequent prediction among the models.
 
-This approach is inspired by earlier work on multi-agent LLM sentisment analysis \cite{sun2023sentiment}, where several model responses are generated for the same input and the final label is chosen by majority decision.
+This approach is inspired by earlier work on multi-agent LLM sentiment analysis \cite{sun2023sentiment}, where several model responses are generated for the same input and the final label is chosen by majority decision.
 
 In cases where all three models provided different labels (a total disagreement), we applied a fixed priority rule to resolve the tie. The priority was based on the overall performance of the models during our tests:
 \begin{enumerate}
