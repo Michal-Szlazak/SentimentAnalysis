@@ -65,27 +65,25 @@ The range of available approaches has also expanded significantly. Classical mac
 
 Previous work has already shown the value of these model families, but it often studies them separately. Many papers compare models within one group, such as classical or deep-learning baselines, while more recent work focuses specifically on LLM prompting or LLM-only aggregation \cite{sun2023sentiment} \cite{zhang2024sentiment}. What is still less explored is a unified comparison across all major model families together with a practical analysis of hybrid strategies. In particular, there is still a need for studies that ask not only which models are most accurate, but also whether they make complementary errors, whether confidence can be used to route difficult cases, and when simple voting is likely to help.
 
-This paper addresses that problem by comparing nine sentiment classification models from four families: classical ML, deep learning, transformers, and LLMs. The evaluation covers datasets from multiple domains, including finance, reviews, and social media. The study then considers three hybrid strategies: LLM-only voting, a confidence-based hierarchical scheme that uses confidence thresholds to decide whether a sample should be passed to a stronger model, and heterogeneous ensemble voting across all model families. Finally, the analysis examines how model errors overlap across datasets and inspects hard examples that are misclassified by many models at once. This makes it possible to answer three practical questions: when does combining models actually help, when can confidence be used to balance quality and cost, and when do correlated errors limit the value of simple aggregation.
-
-The main contributions of this work are as follows:
+This paper addresses that gap. Our contributions are:
 \begin{itemize}
-    \item a multidomain comparison of classical ML, deep learning, transformers, and LLMs under a unified evaluation setup,
-    \item an evaluation of three hybrid strategies: LLM-only voting, confidence-based hierarchical voting, and cross-family ensemble voting, measuring both performance gains and the practical trade-off between stronger and cheaper models,
-    \item an error-overlap and hard-example analysis showing when different models are genuinely complementary and when they fail in similar ways.
+    \item a multidomain comparison of nine models from four families --- classical ML, deep learning, transformers, and LLMs --- evaluated on six datasets spanning finance, reviews, and social media,
+    \item an evaluation of three hybrid strategies (LLM-only voting, confidence-based hierarchical escalation, and cross-family ensemble voting), with analysis of both performance gains and the cost--quality trade-off,
+    \item an error-overlap and hard-example analysis showing when models make complementary errors and when correlated failures limit what aggregation can achieve.
 \end{itemize}
 
 \section{Related Work}
 
-Sentiment analysis (SA) has been an active research area for over two decades, and the approaches used have changed significantly as new machine learning techniques emerged. Early systems relied on hand-crafted lexicons and rule-based methods. VADER \cite{hutto2014vader}, for example, uses a curated list of words combined with grammatical rules to score social media text without any training data. Classical supervised methods such as Support Vector Machines with TF-IDF features later became strong baselines across many domains \cite{singh2020sentiment}.
+Recent survey work by Sharma et al.\ \cite{sharma2025review} and Singh et al.\ \cite{singh2020sentiment} gives a broad account of SA techniques across domains, confirming that no single approach dominates: classical models such as SVM with TF-IDF remain competitive on short or well-structured text, while neural models gain an advantage when more training data is available and when longer context matters.
 
-The introduction of deep learning brought convolutional and recurrent architectures that could capture local patterns and sequential context in text. Transformer-based models, most notably BERT and its variants, pushed performance higher by leveraging large-scale pre-training, enabling fine-tuned models to reach state-of-the-art results on standard SA benchmarks \cite{sharma2025review}.
+The role of LLMs in sentiment classification has been studied directly in several recent papers. Zhang et al.\ \cite{zhang2024sentiment} conduct a large-scale evaluation of instruction-tuned LLMs across standard SA benchmarks and find that, while LLMs are competitive with fine-tuned models on many tasks, they still fall short in domain-specific settings such as finance. Krugmann and Hartmann \cite{sa-in-age-of-genai} show that generative models are sensitive to prompt wording and can refuse to classify content that triggers safety filters, which introduces variability not present in supervised models. Herrera-Poyatos et al.\ \cite{herrera2025overview} review this uncertainty further, identifying prompt sensitivity and output inconsistency as key open problems and calling for mitigation strategies. On the more advanced end, Liskowski and Jankowski \cite{liskowski2026large} apply reasoning-infused LLMs to aspect-based SA and show gains when models are prompted to explain their decisions before labelling.
 
-More recently, Large Language Models have been evaluated as zero-shot or few-shot sentiment classifiers, removing the need for task-specific fine-tuning. \cite{zhang2024sentiment} show that LLMs are competitive with fine-tuned models on many benchmarks but still fall short in specific domains. Jan Ole Krugmann \cite{sa-in-age-of-genai} further demonstrate that generative models can be sensitive to prompt formulation and may refuse certain types of content. Multi-agent and voting-based approaches \cite{sun2023sentiment} have been proposed to reduce this instability. Our work extends these lines of research by providing a systematic cross-domain comparison of all three paradigms classical ML, transformers, and LLMs and by exploring ensemble and confidence-based combination strategies.
+Hybrid and ensemble strategies have also received growing attention. Sun et al.\ \cite{sun2023sentiment} propose having multiple LLM agents negotiate a final label and report that this reduces individual model errors. Ranjbar and Baghbani \cite{ranjbar2025lotus} combine a fine-tuned RoBERTa classifier with Llama-generated explanations at SemEval-2025, achieving stronger results than either component alone. These results suggest that combining model families is promising, but neither study examines whether performance gains hold across diverse domains or when cheaper models can absorb most of the traffic.
 
 \section{Chosen Datasets}
 \label{sec:datasets}
 
-To cover a wide range of domains, text styles, and label granularities, we selected six publicly available sentiment datasets resulting in nine distinct dataset configurations. Table~\ref{tab:datasets} summarises their key properties.
+We use six publicly available datasets covering different domains, text styles, and label granularities, giving nine configurations in total. Table~\ref{tab:datasets} summarises their key properties.
 
 \begin{table}[H]
 \centering
@@ -121,11 +119,9 @@ TweetEval Irony            & Social media     & 2 & 1{,}800      \\
 \section{Methodology}
 \label{sec:methodology}
 
-This section describes the models, experimental setup, and evaluation procedures used to conduct a unified comparison of sentiment analysis approaches across multiple domains.
-
 \subsection{Model Families}
 
-We evaluate nine models from major paradigms: lexicon-based methods, classical machine learning, deep learning, transformer-based architectures, and large language models (LLMs). This diverse selection enables analysis of complementary strengths and failure modes.
+We evaluate nine models across five paradigms: lexicon-based, classical ML, deep learning, transformer-based, and LLMs.
 
 \textbf{Lexicon-based model:}  
 We include VADER, a rule-based sentiment analyzer that relies on a curated lexicon and heuristic rules. It serves as a lightweight baseline requiring no training.
@@ -568,12 +564,12 @@ The first recurring pattern is that models from the same family tend to fail on 
 
 Figure~\ref{fig:mean_pairwise_jaccard} visualises this effect directly. Three blocks are clearly visible: the transformer pair (DistilBERT, DistilRoBERTa), the deep-learning/classical cluster around CNN, SVM, and LSTM, and the LLM cluster formed by Gemini, Llama, and Mistral. By contrast, overlap values between these families are markedly lower, which supports the interpretation that ensemble gains depend on combining models with genuinely different error profiles.
 
-\begin{figure}[!t]
-\centering
-\includegraphics[width=\columnwidth]{data/mean_pairwise_jaccard.png}
-\caption{Mean pairwise Jaccard similarity of model error sets, averaged across all datasets. Darker cells indicate stronger overlap in the sets of misclassified samples.}
-\label{fig:mean_pairwise_jaccard}
-\end{figure}
+% \begin{figure}[!t]
+% \centering
+% \includegraphics[width=\columnwidth]{data/mean_pairwise_jaccard.png}
+% \caption{Mean pairwise Jaccard similarity of model error sets, averaged across all datasets. Darker cells indicate stronger overlap in the sets of misclassified samples.}
+% \label{fig:mean_pairwise_jaccard}
+% \end{figure}
 
 At the level of individual model pairs, the most pronounced overlaps are observed for DistilBERT--DistilRoBERTa on Yelp-Full (0.784), Llama--Mistral on Twitter (0.680), and Gemini--Llama on Twitter (0.613). These values indicate that adding more models from the same family does not necessarily increase ensemble diversity. In other words, a larger ensemble is not automatically a more complementary ensemble.
 
