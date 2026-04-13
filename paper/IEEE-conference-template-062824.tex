@@ -564,12 +564,12 @@ The first recurring pattern is that models from the same family tend to fail on 
 
 Figure~\ref{fig:mean_pairwise_jaccard} visualises this effect directly. Three blocks are clearly visible: the transformer pair (DistilBERT, DistilRoBERTa), the deep-learning/classical cluster around CNN, SVM, and LSTM, and the LLM cluster formed by Gemini, Llama, and Mistral. By contrast, overlap values between these families are markedly lower, which supports the interpretation that ensemble gains depend on combining models with genuinely different error profiles.
 
-% \begin{figure}[!t]
-% \centering
-% \includegraphics[width=\columnwidth]{data/mean_pairwise_jaccard.png}
-% \caption{Mean pairwise Jaccard similarity of model error sets, averaged across all datasets. Darker cells indicate stronger overlap in the sets of misclassified samples.}
-% \label{fig:mean_pairwise_jaccard}
-% \end{figure}
+\begin{figure}[!t]
+\centering
+\includegraphics[width=\columnwidth]{data/mean_pairwise_jaccard.png}
+\caption{Mean pairwise Jaccard similarity of model error sets, averaged across all datasets. Darker cells indicate stronger overlap in the sets of misclassified samples.}
+\label{fig:mean_pairwise_jaccard}
+\end{figure}
 
 At the level of individual model pairs, the most pronounced overlaps are observed for DistilBERT--DistilRoBERTa on Yelp-Full (0.784), Llama--Mistral on Twitter (0.680), and Gemini--Llama on Twitter (0.613). These values indicate that adding more models from the same family does not necessarily increase ensemble diversity. In other words, a larger ensemble is not automatically a more complementary ensemble.
 
