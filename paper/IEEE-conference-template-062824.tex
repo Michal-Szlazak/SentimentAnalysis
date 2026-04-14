@@ -181,9 +181,8 @@ where $E_A$ and $E_B$ are the sets of samples misclassified by each model.
 We also identify \textit{hard samples}, defined as those misclassified by at least 60\% of models, and \textit{all-fail samples}, misclassified by all models. These metrics provide insight into dataset difficulty and the limits of ensemble methods.
 
 \section{Individual Model Results}
-\subsection{Individual Model Performance}
 
-Table~\ref{tab:all_models_acc} reports the accuracy of each model across all nine datasets. Several domain-dependent patterns are immediately apparent. The DistilRoBERTa transformer is the strongest single model on the finance dataset, where fine-tuned language representations provide a clear advantage. Gemini performs best on IMDB and TweetEval-Irony, tasks that rely on broad world knowledge and subtle language understanding. In contrast, on the Twitter dataset, the simpler CNN and LSTM models outperform both transformers and large language models by a wide margin; short, informal tweets seem to favour models that detect surface-level patterns rather than those relying on deep generative representations. VADER is the weakest model in every setting, scoring close to random on multi-class datasets like Twitter (0.220) and Yelp-Full (0.300).
+Table~\ref{tab:all_models_acc} reports the accuracy of each model across all nine datasets. Several domain-dependent patterns are immediately apparent. The DistilRoBERTa transformer is the strongest single model on the finance dataset, where fine-tuned language representations provide a clear advantage. In contrast, on the Twitter dataset, the simpler CNN and LSTM models outperform both transformers and large language models by a wide margin; short, informal tweets seem to favour models that detect surface-level patterns rather than those relying on deep generative representations. VADER is the weakest model in every setting, scoring close to random on multi-class datasets like Twitter (0.220) and Yelp-Full (0.300).
 
 \begin{table*}[t]
 \centering
@@ -196,14 +195,11 @@ Table~\ref{tab:all_models_acc} reports the accuracy of each model across all nin
 \textbf{Model} & \textbf{F50} & \textbf{F66} & \textbf{F75} & \textbf{FA} & \textbf{IDB} & \textbf{TI} & \textbf{TS} & \textbf{TW} & \textbf{YF} \\
 \hline
 DistilBERT      & 0.853 & 0.872 & 0.935 & 0.951 & 0.921 & 0.667 & 0.704 & 0.834 & 0.600 \\
-DistilRoBERTa   & \best{0.865} & \best{0.884} & \best{0.938} & \best{0.971} & 0.930 & 0.688 & \best{0.707} & 0.800 & 0.621 \\
+DistilRoBERTa   & \best{0.865} & \best{0.884} & \best{0.938} & \best{0.971} & \best{0.930} & \best{0.688} & \best{0.707} & 0.800 & \best{0.621} \\
 CNN             & 0.789 & 0.834 & 0.864 & 0.834 & 0.862 & 0.595 & 0.571 & \best{0.866} & 0.540 \\
 VADER           & 0.540 & 0.572 & 0.576 & 0.532 & 0.699 & 0.475 & 0.535 & 0.220 & 0.300 \\
 TF-IDF\,+\,SVM  & 0.795 & 0.831 & 0.865 & 0.905 & 0.901 & 0.636 & 0.598 & 0.802 & 0.574 \\
 LSTM            & 0.691 & 0.741 & 0.784 & 0.804 & 0.887 & 0.606 & 0.621 & 0.853 & 0.505 \\
-Gemini          & 0.803 & 0.860 & 0.903 & 0.920 & \best{0.958} & \best{0.809} & 0.683 & 0.573 & 0.622 \\
-Llama           & 0.821 & 0.873 & 0.899 & 0.921 & 0.953 & 0.786 & 0.659 & 0.533 & 0.649 \\
-Mistral         & 0.780 & 0.844 & 0.878 & 0.894 & 0.939 & 0.732 & 0.676 & 0.515 & \best{0.666} \\
 \hline
 \end{tabular}
 }
