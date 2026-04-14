@@ -50,7 +50,7 @@ The evolution of Natural Language Processing has introduced a wide range of meth
 
 The study uses six distinct datasets - including Twitter, IMDB reviews, TweeEval benchmarks, Yelp, and the Financial PhraseBank - to evaluate model robustness across varying linguistic styles, from noisy social media content to formal financial reports. A central focus of this work is the exploration of hybrid strategies designed to combine the strengths of different model tiers. By implementing multi-stage decision-making frameworks, the research investigates how model consensus, uncertainty-driven escalation, and collaborative voting can enhance classification precision while managing resource allocation.
 
-This paper evaluates cascading workflows in which smaller, specialized models interact with high-parameter LLMs to improve classification accuracy, particularly in resolving linguistic ambiguities such as irony. The study contributes to the development of more effective sentiment analysis pipelines, providing insights into how hybrid architectures can achieve higher predictive performance than individual models in complex, real-world data environments. 
+This paper evaluates cascading workflows in which smaller, specialized models interact with high-parameter LLMs to improve classification accuracy, particularly in resolving linguistic ambiguities such as irony. The study contributes to the development of more effective sentiment analysis pipelines, providing insights into how hybrid architectures can achieve higher predictive performance than individual models in complex, real-world data environments.
 \end{abstract}
 
 \begin{IEEEkeywords}
@@ -123,23 +123,23 @@ TweetEval Irony            & Social media     & 2 & 1{,}800      \\
 
 We evaluate nine models across five paradigms: lexicon-based, classical ML, deep learning, transformer-based, and LLMs.
 
-\textbf{Lexicon-based model:}  
+\textbf{Lexicon-based model:}
 We include VADER, a rule-based sentiment analyzer that relies on a curated lexicon and heuristic rules. It serves as a lightweight baseline requiring no training.
 
-\textbf{Classical machine learning:}  
+\textbf{Classical machine learning:}
 We use a TF-IDF vectorizer combined with a Support Vector Machine (SVM) classifier. This approach represents text as sparse features and has historically been a strong baseline for sentiment classification.
 
-\textbf{Deep learning models:}  
+\textbf{Deep learning models:}
 We evaluate two neural architectures:
 \begin{itemize}
 \item \textbf{CNN}: captures local n-gram patterns via convolutional filters.
 \item \textbf{LSTM}: models sequential dependencies and contextual information in text.
 \end{itemize}
 
-\textbf{Transformer-based models:}  
+\textbf{Transformer-based models:}
 We include DistilBERT and DistilRoBERTa, which are lightweight variants of large pretrained transformers. These models are fine-tuned on each dataset and represent the state of the art in supervised sentiment analysis.
 
-\textbf{Large Language Models (LLMs):}  
+\textbf{Large Language Models (LLMs):}
 We evaluate three instruction-tuned LLMs accessed via API:
 \begin{itemize}
 \item Gemini (gemini-2.5-flash)
@@ -156,16 +156,16 @@ We evaluate model performance using two standard metrics: \textbf{Accuracy} and 
 
 To explore the benefits of combining models, we evaluate several aggregation strategies:
 
-\textbf{Majority voting:}  
+\textbf{Majority voting:}
 Each model contributes one vote, and the most frequent label is selected.
 
-\textbf{Accuracy-weighted voting:}  
+\textbf{Accuracy-weighted voting:}
 Votes are weighted by each model's overall accuracy on the dataset.
 
-\textbf{Confidence-weighted voting:}  
+\textbf{Confidence-weighted voting:}
 Predictions are weighted by model confidence scores. For LLMs, which do not provide calibrated probabilities, a fallback confidence estimate is used if needed (for example, overall accuracy on the dataset).
 
-\textbf{Confidence-based hybrid pipeline:}  
+\textbf{Confidence-based hybrid pipeline:}
 Models are organized in a hierarchical sequence from low-cost to high-cost (SVM $\rightarrow$ CNN $\rightarrow$ LSTM $\rightarrow$ transformer $\rightarrow$ LLM). A sample is classified by the first model whose confidence exceeds a predefined threshold; otherwise, it is passed to the next model in the chain.
 
 This design allows efficient allocation of computational resources while preserving accuracy on difficult examples.
@@ -180,7 +180,38 @@ where $E_A$ and $E_B$ are the sets of samples misclassified by each model.
 
 We also identify \textit{hard samples}, defined as those misclassified by at least 60\% of models, and \textit{all-fail samples}, misclassified by all models. These metrics provide insight into dataset difficulty and the limits of ensemble methods.
 
-\subsection{LLM-Based Sentiment Classification Setup}
+\section{Individual Model Results}
+
+This section reports results for the lexicon-based baseline, classical ML, deep learning, and encoder-only transformer models. LLM results are reported separately in section~\ref{sec:llm_based_class} (Table~\ref{tab:llm_results_main}).
+
+Table~\ref{tab:all_models_acc} presents the accuracy of each model across all nine datasets. Several domain-dependent patterns are immediately apparent. The DistilRoBERTa transformer is the strongest single model on the finance datasets, where fine-tuned language representations provide a clear advantage, as well as on the IMDB and Yelp-Full datasets. In contrast, on the Twitter (TW) dataset, the simpler CNN and LSTM models outperform both transformers; short, informal tweets seem to favour models that detect surface-level patterns rather than those relying on deep generative representations. VADER is the weakest model in every setting, scoring close to random on multi-class datasets like Twitter (0.220) and Yelp-Full (0.300).
+
+It should be noted that while Large Language Models (LLMs) were also evaluated as part of this study, their results are omitted from Table~\ref{tab:all_models_acc} to maintain clarity; these are instead presented and discussed in detail in the following section (see Table~\ref{tab:llm_results_main}).
+
+\begin{table*}[t]
+\centering
+\scriptsize
+\caption{Individual model accuracy across all datasets. Dataset abbreviations: F50/F66/F75/FA = Finance-50/66/75/All-Agree; IDB = IMDB; TI/TS = TweetEval-Irony/Sentiment; TW = Twitter; YF = Yelp-Full.}
+\label{tab:all_models_acc}
+\resizebox{\textwidth}{!}{%
+\begin{tabular}{|l|c|c|c|c|c|c|c|c|c|}
+\hline
+\textbf{Model} & \textbf{F50} & \textbf{F66} & \textbf{F75} & \textbf{FA} & \textbf{IDB} & \textbf{TI} & \textbf{TS} & \textbf{TW} & \textbf{YF} \\
+\hline
+DistilBERT      & 0.853 & 0.872 & 0.935 & 0.951 & 0.921 & 0.667 & 0.704 & 0.834 & 0.600 \\
+DistilRoBERTa   & \best{0.865} & \best{0.884} & \best{0.938} & \best{0.971} & \best{0.930} & \best{0.688} & \best{0.707} & 0.800 & \best{0.621} \\
+CNN             & 0.789 & 0.834 & 0.864 & 0.834 & 0.862 & 0.595 & 0.571 & \best{0.866} & 0.540 \\
+VADER           & 0.540 & 0.572 & 0.576 & 0.532 & 0.699 & 0.475 & 0.535 & 0.220 & 0.300 \\
+TF-IDF\,+\,SVM  & 0.795 & 0.831 & 0.865 & 0.905 & 0.901 & 0.636 & 0.598 & 0.802 & 0.574 \\
+LSTM            & 0.691 & 0.741 & 0.784 & 0.804 & 0.887 & 0.606 & 0.621 & 0.853 & 0.505 \\
+\hline
+\end{tabular}
+}
+\end{table*}
+
+
+\section{LLM-Based Sentiment Classification}
+\label{sec:llm_based_class}
 The classification setup was designed to evaluate the capabilities of state-of-the-art LLMs. All models were accessed through the Google Cloud Vertex AI API, which provided a unified infrastructure for request management and model serving. The study included three models:
 \begin{itemize}
     \item \textbf{Gemini}: gemini-2.5-flash,
@@ -189,7 +220,7 @@ The classification setup was designed to evaluate the capabilities of state-of-t
 \end{itemize}
 
 The classification process was handled by a Python-based integration layer, and outputs were stored in structured JSONL format to keep predictions aligned with ground-truth labels through unique sample indices.
-\subsubsection{Prompt Engineering and In-Context Learning}
+\subsection{Prompt Engineering and In-Context Learning}
 To reduce variation across model responses, a standardized five-part prompt structure was used. It was designed to give the models clear task instructions and a consistent input format:
 \begin{itemize}
 \item \textbf{System Role}: Sets the model's role as a sentiment classifier,
@@ -201,7 +232,7 @@ To reduce variation across model responses, a standardized five-part prompt stru
 
 \vspace{-0.6em}
 
-\subsubsection{Error Handling and Retries}
+\subsection{Error Handling and Retries}
 Large-scale API-based inference introduces challenges regarding rate limits and safety-alignment triggers. During the initial pass, we observed a non-negligible rate of unclassified examples (Table~\ref{tab:unclassified_by_model}), primarily due to:
 \begin{enumerate}
     \item \textbf{Rate Limiting}: Exceeding tokens-per-minute (TPM) or requests-per-minute (RPM) quotas,
@@ -252,7 +283,7 @@ Gemini & imdb & 1 \\
 
 Problems with content filtering are consistent with observations reported in earlier work \cite{sa-in-age-of-genai}, where generative models, especially from the Llama family, were also found to sometimes reject prompts containing profanity or highly emotional language, even when such content was part of normal user-generated reviews.
 
-\section{Evaluation and Comparative Analysis}
+\subsection{Evaluation and Comparative Analysis}
 The models were evaluated using Accuracy and Macro-F1. Accuracy shows the overall share of correct predictions, while Macro-F1 is useful because some datasets are not perfectly balanced across sentiment classes.
 \begin{table}[H]
 \centering
@@ -280,6 +311,8 @@ tweet\_eval\_irony   & \best{0.809} & \best{0.807} & 0.731 & 0.731 & 0.786 & 0.7
 \end{table}
 
 The empirical results indicate that no single model is uniformly dominant across all domains. Performance is dataset-dependent: some models work better on more structured and less noisy data, whereas others are more competitive on noisy social media data.
+
+Comparison with the results in Table~\ref{tab:all_models_acc} shows that LLMs are most competitive on IMDB and TweetEval-Irony, where they match or surpass the strongest models from the previous section. By contrast, on the finance subsets, fine-tuned transformers, especially DistilRoBERTa, remain clearly stronger, while on Twitter the task-specific CNN and LSTM models substantially outperform all three LLMs. Yelp-Full represents an intermediate case, where the best LLM result is close to the strongest non-LLM model.
 
 \section{Multi-Model Voting and Tie-Breaking Strategy}
 To improve our classifications, we combined the predictions from all three models (Gemini, Llama and Mistral) using a majority voting logic. For every text sample, the final label was chosen based on the most frequent prediction among the models.
@@ -327,7 +360,7 @@ The experiments demonstrate that while individual Large Language Models are high
 
 However, we observed that on noisier data (e.g., social media), simple voting does not always outperform the best single model. It is important to note that the results presented here are highly dependent on the quality of the instructions provided to the models. Further refinement of prompt engineering-specifically through better selection of few-shot examples and more detailed category descriptions-could likely lead to even higher classification accuracy across all tested domains.
 
-\section{Multi-Model Confidence Voting}
+\section{Multi-Model Confidence-Based Hybrid Pipeline}
 In real-world applications of sentiment analysis, predictive performance is not the sole consideration. Operational efficiency - specifically the costs associated with hardware requirements and inference throughput - is equally critical. Large Language Models (LLMs) and other Transformer-based architectures, such as BERT or RoBERTa, are significantly more resource-intensive than traditional approaches like Convolutional Neural Networks (CNNs) \cite{zhang2024sentiment,sa-in-age-of-genai}.
 
 To mitigate these costs, a hybrid framework is proposed to maximize the utilization of computationally efficient models for trivial cases while reserving more powerful models for challenging ones. The proposed system utilizes the confidence scores produced by each model during inference. Models are organized hierarchically, from the least to the most computationally expensive:
@@ -344,29 +377,30 @@ The framework was evaluated using three confidence thresholds: 0.90, 0.95, and 0
 \begin{table}[H]
 \centering
 \scriptsize
-\caption{Per-dataset accuracy of Multi-Model Confidence Voting with different thresholds.}
+\caption{Per-dataset accuracy of Multi-Model Confidence-based Hybrid Pipeline with different thresholds.}
 \label{tab:confidence_voting_results}
 \resizebox{\columnwidth}{!}{%
-\begin{tabular}{|l|c|c|c|}
+\begin{tabular}{|l|c|c|c|c|}
 \hline
-\textbf{Dataset} & \textbf{0.90} & \textbf{0.95} & \textbf{0.98} \\
+\textbf{Dataset} & \textbf{0.90} & \textbf{0.95} & \textbf{0.98} & \textbf{Best single model} \\
 
 \hline
-twitter              & \best{0.856} & 0.824 & 0.766 \\
-imdb                 & 0.925 & 0.938 & \best{0.948} \\
-finance\_50agree     & \best{0.854} & 0.851 & 0.830 \\
-finance\_66agree     & 0.892 & 0.902 & \best{0.906} \\
-finance\_75agree     & 0.931 & 0.944 &\best{0.952} \\
-finance\_all\_agree  & \best{0.945} & 0.923 & 0.815 \\
-yelp\_full           & \best{0.626} & 0.624 & 0.623 \\
-tweet\_eval\_sentiment & \best{0.691} & 0.688 & 0.683 \\
-tweet\_eval\_irony   & 0.790 & \best{0.811} & 0.810 \\
+twitter              & \best{0.856} & 0.824 & 0.766 & 0.866 \\
+imdb                 & 0.925 & 0.938 & \best{0.948} & 0.958 \\
+finance\_50agree     & \best{0.854} & 0.851 & 0.830 & 0.865 \\
+finance\_66agree     & 0.892 & 0.902 & \best{0.906} & 0.884 \\
+finance\_75agree     & 0.931 & 0.944 &\best{0.952} & 0.938 \\
+finance\_all\_agree  & \best{0.945} & 0.923 & 0.815 & 0.971 \\
+yelp\_full           & \best{0.626} & 0.624 & 0.623 & 0.666 \\
+tweet\_eval\_sentiment & \best{0.691} & 0.688 & 0.683 & 0.707 \\
+tweet\_eval\_irony   & 0.790 & \best{0.811} & 0.810 & 0.809 \\
 \hline
 \end{tabular}
 }
 \end{table}
 
 The results indicate that the 0.90 threshold generally yielded the most consistent performance. While the 0.98 threshold outperformed others on specific datasets, it exhibited significant volatility, whereas the 0.90 threshold maintained steady accuracy across all tested environments.
+Additionally, the hybrid pipeline with a 0.90 confidence threshold maintains performance levels highly competitive with the best single model, showing a marginal accuracy trade-off across most datasets while providing significantly more stability than higher threshold configurations.
 
 \begin{table}[H] % Asterisk makes the table span both columns
 \centering
@@ -456,7 +490,7 @@ gemini & 0.847 & 0.577 & 0.932 & 0.600 & 0.992 & 0.620 \\
 }
 \end{table}
 
-Utilization metrics reveal that reliance on expensive models was significantly lower at a 0.90 threshold compared to 0.98. However, in certain datasets where initial model confidence was inherently low, the terminal model was invoked for the majority of cases. Across nearly all datasets and thresholds, the preceding models maintained high accuracy when their confidence exceeded the threshold. This suggests that the proposed confidence-voting hybrid is a viable strategy for optimizing operational costs in large-scale sentiment analysis without compromising long-term accuracy.
+Utilization metrics reveal that reliance on expensive models was significantly lower at a 0.90 threshold compared to 0.98. However, in certain datasets where initial model confidence was inherently low, the terminal model was invoked for the majority of cases. Across nearly all datasets and thresholds, the preceding models maintained high accuracy when their confidence exceeded the threshold. This suggests that the proposed confidence-based hybrid pipeline is a viable strategy for optimizing operational costs in large-scale sentiment analysis without compromising long-term accuracy.
 
 The lower accuracy observed in the terminal model (Gemini) across specific datasets - most notably in the Finance and Twitter subsets - can be attributed to the cascading nature of the framework. Because the preceding models successfully classified 'clear' instances with high confidence, the terminal model was exclusively tasked with the 'residuals': samples characterized by extreme ambiguity, linguistic noise, or domain-specific complexity that challenged all previous architectures in the pipeline.
 
@@ -475,34 +509,6 @@ We evaluate four ensemble strategies applied row-by-row across the nine models:
 \end{enumerate}
 
 Accuracy-weighted voting was also evaluated with softmax-normalised weights, but since all nine model accuracies fall within a moderate range, the softmax compression reduces weights to near-uniform values ($\approx$0.11 per model), producing results identical to raw accuracy weighting. We therefore report only the raw variant.
-
-\subsection{Individual Model Performance}
-
-Table~\ref{tab:all_models_acc} reports the accuracy of each model across all nine datasets. Several domain-dependent patterns are immediately apparent. The DistilRoBERTa transformer is the strongest single model on the finance dataset, where fine-tuned language representations provide a clear advantage. Gemini performs best on IMDB and TweetEval-Irony, tasks that rely on broad world knowledge and subtle language understanding. In contrast, on the Twitter dataset, the simpler CNN and LSTM models outperform both transformers and large language models by a wide margin; short, informal tweets seem to favour models that detect surface-level patterns rather than those relying on deep generative representations. VADER is the weakest model in every setting, scoring close to random on multi-class datasets like Twitter (0.220) and Yelp-Full (0.300).
-
-\begin{table*}[t]
-\centering
-\scriptsize
-\caption{Individual model accuracy across all datasets. Dataset abbreviations: F50/F66/F75/FA = Finance-50/66/75/All-Agree; IDB = IMDB; TI/TS = TweetEval-Irony/Sentiment; TW = Twitter; YF = Yelp-Full.}
-\label{tab:all_models_acc}
-\resizebox{\textwidth}{!}{%
-\begin{tabular}{|l|c|c|c|c|c|c|c|c|c|}
-\hline
-\textbf{Model} & \textbf{F50} & \textbf{F66} & \textbf{F75} & \textbf{FA} & \textbf{IDB} & \textbf{TI} & \textbf{TS} & \textbf{TW} & \textbf{YF} \\
-\hline
-DistilBERT      & 0.853 & 0.872 & 0.935 & 0.951 & 0.921 & 0.667 & 0.704 & 0.834 & 0.600 \\
-DistilRoBERTa   & \best{0.865} & \best{0.884} & \best{0.938} & \best{0.971} & 0.930 & 0.688 & \best{0.707} & 0.800 & 0.621 \\
-CNN             & 0.789 & 0.834 & 0.864 & 0.834 & 0.862 & 0.595 & 0.571 & \best{0.866} & 0.540 \\
-VADER           & 0.540 & 0.572 & 0.576 & 0.532 & 0.699 & 0.475 & 0.535 & 0.220 & 0.300 \\
-TF-IDF\,+\,SVM  & 0.795 & 0.831 & 0.865 & 0.905 & 0.901 & 0.636 & 0.598 & 0.802 & 0.574 \\
-LSTM            & 0.691 & 0.741 & 0.784 & 0.804 & 0.887 & 0.606 & 0.621 & 0.853 & 0.505 \\
-Gemini          & 0.803 & 0.860 & 0.903 & 0.920 & \best{0.958} & \best{0.809} & 0.683 & 0.573 & 0.622 \\
-Llama           & 0.821 & 0.873 & 0.899 & 0.921 & 0.953 & 0.786 & 0.659 & 0.533 & 0.649 \\
-Mistral         & 0.780 & 0.844 & 0.878 & 0.894 & 0.939 & 0.732 & 0.676 & 0.515 & \best{0.666} \\
-\hline
-\end{tabular}
-}
-\end{table*}
 
 \subsection{Ensemble Results and Analysis}
 
@@ -598,7 +604,7 @@ The error-overlap analysis has direct consequences for the design of hybrid sent
 
 These findings motivate a more selective hybrid strategy than uniform voting. The results reported earlier already suggest that the best model family is dataset-dependent: transformers perform best on the finance datasets, LLMs are strongest on IMDB and TweetEval-Irony, and deep learning models are clearly superior on Twitter. Rather than treating all predictions as equally useful, future hybrid methods should take into account both expected model quality and the degree of error correlation between model families. In this sense, error-overlap analysis is not only descriptive; it helps identify the conditions under which more adaptive hybrid architectures may be worth exploring.
 
-\section{Conclusion}
+\section{Conclusions}
 This benchmarking study provides a multidimensional evaluation of sentiment classification architectures, ranging from classical support vector machines to state-of-the-art large language models. Our results lead to four primary conclusions regarding the current state of automated sentiment analysis:
 
 \begin{enumerate}
