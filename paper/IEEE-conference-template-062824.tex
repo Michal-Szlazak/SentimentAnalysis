@@ -38,7 +38,8 @@ Warsaw, Poland}
 Warsaw, Poland}
 \and
 \IEEEauthorblockN{4\textsuperscript{th} Marek Wdowiak}
-\IEEEauthorblockA{\textit{Institute of Theoretical Electrical Engineering and Information-Measurement System} \\
+\IEEEauthorblockA{\textit{Institute of Theoretical Electrical Engineering} \\
+\textit{and Information-Measurement System} \\
 \textit{Warsaw University of Technology}\\
 Warsaw, Poland}
 }
@@ -406,7 +407,7 @@ tweet\_eval\_irony   & 0.790 & \best{0.811} & 0.810 & 0.809 \\
 The results indicate that the 0.90 threshold generally yielded the most consistent performance. While the 0.98 threshold outperformed others on specific datasets, it exhibited significant volatility, whereas the 0.90 threshold maintained steady accuracy across all tested environments.
 Additionally, the hybrid pipeline with a 0.90 confidence threshold maintains performance levels highly competitive with the best single model, showing a marginal accuracy trade-off across most datasets while providing significantly more stability than higher threshold configurations.
 
-\begin{table*}[!t]
+\begin{table*}[H]
 \centering
 \caption{Model Utilization Across Different Threshold Values}
 \label{tab:model_comparison}
@@ -572,7 +573,7 @@ At the level of individual model pairs, the most pronounced overlaps are observe
 
 At the same time, several high-overlap cross-family pairs are also observed, most notably SVM--LSTM on TweetEval-Sentiment (0.611) and CNN--SVM on Finance-66Agree (0.590). This is an important nuance: some examples are difficult not because one model family is uniquely weak, but because the underlying samples are intrinsically ambiguous and induce correlated failures even across heterogeneous architectures.
 
-\begin{table}[!t]
+\begin{table}[H]
 \centering
 \footnotesize
 \caption{Error-overlap summary by dataset. ``Within'' and ``Between'' denote the mean pairwise Jaccard similarity of model error sets for pairs from the same family and from different families, respectively. ``Hard'' counts samples misclassified by at least 60\% of models.}
@@ -623,6 +624,7 @@ This benchmarking study provides a multidimensional evaluation of sentiment clas
 
 In conclusion, the optimal deployment strategy for sentiment analysis remains highly context-dependent.
 
+\newpage
 \bibliographystyle{IEEEtran}
 \bibliography{bibliography}
 
