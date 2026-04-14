@@ -579,18 +579,15 @@ The results presented so far show that the tested methods improve performance on
 \subsection{Error Overlap Within and Across Model Families}
 
 The first recurring pattern is that models from the same family tend to fail on the same instances substantially more often than models from different families. Across all datasets, the mean Jaccard similarity of error sets is 0.414 for within-family pairs, compared with only 0.234 for cross-family pairs. This confirms that architectural similarity translates into partially redundant error profiles. The effect is visible in every domain, but is strongest for Yelp-Full, TweetEval-Sentiment, and Twitter, where the average within-family overlap reaches 0.556, 0.519, and 0.472 respectively.
-
-Figure~\ref{fig:mean_pairwise_jaccard} visualises this effect directly. Three blocks are clearly visible: the transformer pair (DistilBERT, DistilRoBERTa), the deep-learning/classical cluster around CNN, SVM, and LSTM, and the LLM cluster formed by Gemini, Llama, and Mistral. By contrast, overlap values between these families are markedly lower, which supports the interpretation that ensemble gains depend on combining models with genuinely different error profiles.
-
 \begin{figure}[!t]
 \centering
 \includegraphics[width=\columnwidth]{data/mean_pairwise_jaccard.png}
 \caption{Mean pairwise Jaccard similarity of model error sets, averaged across all datasets. Darker cells indicate stronger overlap in the sets of misclassified samples.}
 \label{fig:mean_pairwise_jaccard}
 \end{figure}
+Figure~\ref{fig:mean_pairwise_jaccard} visualises this effect directly. Three blocks are clearly visible: the transformer pair (DistilBERT, DistilRoBERTa), the deep-learning/classical cluster around CNN, SVM, and LSTM, and the LLM cluster formed by Gemini, Llama, and Mistral. By contrast, overlap values between these families are markedly lower, which supports the interpretation that ensemble gains depend on combining models with genuinely different error profiles.
 
 At the level of individual model pairs, the most pronounced overlaps are observed for DistilBERT--DistilRoBERTa on Yelp-Full (0.784), Llama--Mistral on Twitter (0.680), and Gemini--Llama on Twitter (0.613). These values indicate that adding more models from the same family does not necessarily increase ensemble diversity. In other words, a larger ensemble is not automatically a more complementary ensemble.
-
 At the same time, several high-overlap cross-family pairs are also observed, most notably SVM--LSTM on TweetEval-Sentiment (0.611) and CNN--SVM on Finance-66Agree (0.590). This is an important nuance: some examples are difficult not because one model family is uniquely weak, but because the underlying samples are intrinsically ambiguous and induce correlated failures even across heterogeneous architectures.
 
 \begin{table}[H]
