@@ -182,7 +182,11 @@ We also identify \textit{hard samples}, defined as those misclassified by at lea
 
 \section{Individual Model Results}
 
-Table~\ref{tab:all_models_acc} reports the accuracy of each model across all nine datasets. Several domain-dependent patterns are immediately apparent. The DistilRoBERTa transformer is the strongest single model on the finance dataset, where fine-tuned language representations provide a clear advantage. In contrast, on the Twitter dataset, the simpler CNN and LSTM models outperform both transformers and large language models by a wide margin; short, informal tweets seem to favour models that detect surface-level patterns rather than those relying on deep generative representations. VADER is the weakest model in every setting, scoring close to random on multi-class datasets like Twitter (0.220) and Yelp-Full (0.300).
+This section reports results for the lexicon-based baseline, classical ML, deep learning, and encoder-only transformer models. LLM results are reported separately in section~\ref{sec:llm_based_class} (Table~\ref{tab:llm_results_main}).
+
+Table~\ref{tab:all_models_acc} presents the accuracy of each model across all nine datasets. Several domain-dependent patterns are immediately apparent. The DistilRoBERTa transformer is the strongest single model on the finance datasets, where fine-tuned language representations provide a clear advantage, as well as on the IMDB and Yelp-Full datasets. In contrast, on the Twitter (TW) dataset, the simpler CNN and LSTM models outperform both transformers; short, informal tweets seem to favour models that detect surface-level patterns rather than those relying on deep generative representations. VADER is the weakest model in every setting, scoring close to random on multi-class datasets like Twitter (0.220) and Yelp-Full (0.300).
+
+It should be noted that while Large Language Models (LLMs) were also evaluated as part of this study, their results are omitted from Table~\ref{tab:all_models_acc} to maintain clarity; these are instead presented and discussed in detail in the following section (see Table~\ref{tab:llm_results_main}).
 
 \begin{table*}[t]
 \centering
@@ -207,6 +211,7 @@ LSTM            & 0.691 & 0.741 & 0.784 & 0.804 & 0.887 & 0.606 & 0.621 & 0.853 
 
 
 \section{LLM-Based Sentiment Classification}
+\label{sec:llm_based_class}
 The classification setup was designed to evaluate the capabilities of state-of-the-art LLMs. All models were accessed through the Google Cloud Vertex AI API, which provided a unified infrastructure for request management and model serving. The study included three models:
 \begin{itemize}
     \item \textbf{Gemini}: gemini-2.5-flash,
@@ -215,7 +220,7 @@ The classification setup was designed to evaluate the capabilities of state-of-t
 \end{itemize}
 
 The classification process was handled by a Python-based integration layer, and outputs were stored in structured JSONL format to keep predictions aligned with ground-truth labels through unique sample indices.
-\subsubsection{Prompt Engineering and In-Context Learning}
+\subsection{Prompt Engineering and In-Context Learning}
 To reduce variation across model responses, a standardized five-part prompt structure was used. It was designed to give the models clear task instructions and a consistent input format:
 \begin{itemize}
 \item \textbf{System Role}: Sets the model's role as a sentiment classifier,
@@ -227,7 +232,7 @@ To reduce variation across model responses, a standardized five-part prompt stru
 
 \vspace{-0.6em}
 
-\subsubsection{Error Handling and Retries}
+\subsection{Error Handling and Retries}
 Large-scale API-based inference introduces challenges regarding rate limits and safety-alignment triggers. During the initial pass, we observed a non-negligible rate of unclassified examples (Table~\ref{tab:unclassified_by_model}), primarily due to:
 \begin{enumerate}
     \item \textbf{Rate Limiting}: Exceeding tokens-per-minute (TPM) or requests-per-minute (RPM) quotas,
@@ -306,6 +311,8 @@ tweet\_eval\_irony   & \best{0.809} & \best{0.807} & 0.731 & 0.731 & 0.786 & 0.7
 \end{table}
 
 The empirical results indicate that no single model is uniformly dominant across all domains. Performance is dataset-dependent: some models work better on more structured and less noisy data, whereas others are more competitive on noisy social media data.
+
+Comparison with the results in Table~\ref{tab:all_models_acc} shows that LLMs are most competitive on IMDB and TweetEval-Irony, where they match or surpass the strongest models from the previous section. By contrast, on the finance subsets, fine-tuned transformers, especially DistilRoBERTa, remain clearly stronger, while on Twitter the task-specific CNN and LSTM models substantially outperform all three LLMs. Yelp-Full represents an intermediate case, where the best LLM result is close to the strongest non-LLM model.
 
 \section{Multi-Model Voting and Tie-Breaking Strategy}
 To improve our classifications, we combined the predictions from all three models (Gemini, Llama and Mistral) using a majority voting logic. For every text sample, the final label was chosen based on the most frequent prediction among the models.
