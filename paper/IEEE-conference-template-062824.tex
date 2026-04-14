@@ -239,7 +239,12 @@ Large-scale API-based inference introduces challenges regarding rate limits and 
     \item \textbf{Content Filtering}: Safety filters occasionally blocked prompts containing vulgar or highly emotional review fragments, even when they were relevant to the sentiment classification task.
 \end{enumerate}
 
-To reduce the number of missing predictions, a simple retry procedure was used. For rate-limit errors, requests were repeated with increasing delays. For samples that failed inside a batch, problematic items were resubmitted individually. As shown in Table~\ref{tab:unclassified_by_model_after_retry}, this procedure reduced the number of missing predictions to a very low level.
+To reduce the number of missing predictions, a simple retry procedure was used. For rate-limit errors, requests were repeated with increasing delays. For samples that failed inside a batch, problematic items were resubmitted individually. 
+
+~As shown in Table~\ref{tab:unclassified_by_model_after_retry}, this procedure reduced the number of missing predictions to a very low level.
+
+Problems with content filtering are consistent with observations reported in earlier work \cite{sa-in-age-of-genai}, where generative models, especially from the Llama family, were also found to sometimes reject prompts containing profanity or highly emotional language, even when such content was part of normal user-generated reviews.
+
 \begin{table}[H]
 \centering
 \caption{Initially unclassified examples by model and dataset}
@@ -280,9 +285,10 @@ Gemini & imdb & 1 \\
 \end{tabular}
 \end{table}
 
-Problems with content filtering are consistent with observations reported in earlier work \cite{sa-in-age-of-genai}, where generative models, especially from the Llama family, were also found to sometimes reject prompts containing profanity or highly emotional language, even when such content was part of normal user-generated reviews.
 \subsection{Evaluation and Comparative Analysis}
 The models were evaluated using Accuracy and Macro-F1. Accuracy shows the overall share of correct predictions, while Macro-F1 is useful because some datasets are not perfectly balanced across sentiment classes.
+
+The empirical results indicate that no single model is uniformly dominant across all domains. Performance is dataset-dependent: some models work better on more structured and less noisy data, whereas others are more competitive on noisy social media data.
 \begin{table}[H]
 \centering
 \scriptsize
@@ -307,8 +313,6 @@ tweet\_eval\_irony   & \best{0.809} & \best{0.807} & 0.731 & 0.731 & 0.786 & 0.7
 \end{tabular}
 }
 \end{table}
-
-The empirical results indicate that no single model is uniformly dominant across all domains. Performance is dataset-dependent: some models work better on more structured and less noisy data, whereas others are more competitive on noisy social media data.
 
 As shown in Table~\ref{tab:all_models_acc}, LLMs outperform the strongest models from the previous section on IMDB, TweetEval-Irony, and Yelp-Full datasets. In contrast, on the finance subsets, fine-tuned transformers, particularly DistilRoBERTa, remain clearly stronger, while on Twitter the CNN and LSTM models outperform all three LLMs.
 
@@ -362,6 +366,7 @@ However, we observed that on noisier data (e.g., social media), simple voting do
 In real-world applications of sentiment analysis, predictive performance is not the sole consideration. Operational efficiency - specifically the costs associated with hardware requirements and inference throughput - is equally critical. Large Language Models (LLMs) and other Transformer-based architectures, such as BERT or RoBERTa, are significantly more resource-intensive than traditional approaches like Convolutional Neural Networks (CNNs) \cite{zhang2024sentiment,sa-in-age-of-genai}.
 
 To mitigate these costs, a hybrid framework is proposed to maximize the utilization of computationally efficient models for trivial cases while reserving more powerful models for challenging ones. The proposed system utilizes the confidence scores produced by each model during inference. Models are organized hierarchically, from the least to the most computationally expensive:
+
 \begin{enumerate}
     \item SVM,
     \item CNN,
@@ -369,6 +374,7 @@ To mitigate these costs, a hybrid framework is proposed to maximize the utilizat
     \item RoBERTa,
     \item Gemini.
 \end{enumerate}
+
 This ordering ensures that the more expensive Transformer models are positioned at the end of the chain. In theory, this ensures that only the most complex cases are processed by these high-cost models, while simpler instances are classified by traditional architectures.
 
 The framework was evaluated using three confidence thresholds: 0.90, 0.95, and 0.98.
@@ -400,11 +406,11 @@ tweet\_eval\_irony   & 0.790 & \best{0.811} & 0.810 & 0.809 \\
 The results indicate that the 0.90 threshold generally yielded the most consistent performance. While the 0.98 threshold outperformed others on specific datasets, it exhibited significant volatility, whereas the 0.90 threshold maintained steady accuracy across all tested environments.
 Additionally, the hybrid pipeline with a 0.90 confidence threshold maintains performance levels highly competitive with the best single model, showing a marginal accuracy trade-off across most datasets while providing significantly more stability than higher threshold configurations.
 
-\begin{table}[H] % Asterisk makes the table span both columns
+\begin{table*}[!t]
 \centering
 \caption{Model Utilization Across Different Threshold Values}
 \label{tab:model_comparison}
-\resizebox{\columnwidth}{!}{
+\resizebox{\textwidth}{!}{
 \small
 \begin{tabular}{lcccccc}
 \toprule
@@ -486,7 +492,7 @@ gemini & 0.847 & 0.577 & 0.932 & 0.600 & 0.992 & 0.620 \\
 
 \end{tabular}
 }
-\end{table}
+\end{table*}
 
 Utilization metrics reveal that reliance on expensive models was significantly lower at a 0.90 threshold compared to 0.98. However, in certain datasets where initial model confidence was inherently low, the terminal model was invoked for the majority of cases. Across nearly all datasets and thresholds, the preceding models maintained high accuracy when their confidence exceeded the threshold. This suggests that the proposed confidence-based hybrid pipeline is a viable strategy for optimizing operational costs in large-scale sentiment analysis without compromising long-term accuracy.
 
