@@ -25,6 +25,7 @@
 \definecolor{PosterBlue}{RGB}{13,58,92}
 \definecolor{PosterTeal}{RGB}{27,121,140}
 \definecolor{PosterGray}{RGB}{243,246,248}
+\definecolor{PosterHighlight}{RGB}{247,250,252}
 \definecolor{PosterLine}{RGB}{210,218,224}
 \definecolor{PosterMint}{RGB}{216,238,224}
 \definecolor{PosterGold}{RGB}{247,232,193}
@@ -46,15 +47,17 @@
 
 \newcommand{\takeawaybox}[1]{%
   \setlength{\fboxsep}{12pt}%
-  \colorbox{PosterGray}{%
-    \parbox{0.97\linewidth}{\bfseries\fontsize{16.5}{20}\selectfont #1}%
+  \makebox[\linewidth][c]{%
+    \colorbox{PosterGray}{%
+      \parbox{0.97\linewidth}{\centering\bfseries\fontsize{16.5}{20}\selectfont #1}%
+    }%
   }%
 }
 
 \newcommand{\highlightbox}[2]{%
   \setlength{\fboxsep}{9pt}%
-  \colorbox{PosterGray}{%
-    \parbox{0.97\linewidth}{\fontsize{14}{17}\selectfont\textbf{#1} #2}%
+  \fcolorbox{PosterTeal}{PosterHighlight}{%
+    \parbox{0.955\linewidth}{\fontsize{14}{17}\selectfont\textbf{#1} #2}%
   }%
 }
 
@@ -89,7 +92,7 @@
 \vspace{0.3em}
 {\fontsize{16.5}{20}\selectfont Warsaw University of Technology\par}
 \vspace{0.9em}
-\takeawaybox{No single sentiment model dominates across all domains. The strongest practical systems are domain-aware and combine heterogeneous models through voting or confidence-based routing.}
+\takeawaybox{No single sentiment model dominates across all domains. Voting and selective routing to stronger models are one practical option for improving results.}
 \vspace{1.2em}
 \end{center}
 ]
@@ -97,17 +100,17 @@
 \postersection{Introduction}
 Sentiment analysis remains useful in opinion mining, customer feedback, finance, and social media monitoring, but model quality depends strongly on domain, label scheme, text length, and linguistic ambiguity. A system that works well on long movie reviews may fail on short tweets, irony, or formal financial statements.
 
-This work compares classical ML, deep learning, transformers, and large language models across a multidomain benchmark. We also evaluate whether voting and confidence-based hybrid pipelines can improve accuracy without depending entirely on the most expensive model.
+This work compares classical ML, deep learning, transformers, and large language models across a multidomain benchmark. We test several voting variants and also analyze a selective hybrid pipeline that calls the more expensive model only when earlier stages are not confident enough.
 
 The goal of the study is not only to rank models, but also to understand \emph{why} some combinations work. In particular, we ask whether stronger results come from model scale alone, or from combining model families with complementary error profiles.
 
 This study asks two practical questions:
 \begin{itemize}[leftmargin=1.2em,itemsep=0.3em,topsep=0.3em]
   \item Is there one model family that works best across all sentiment domains?
-  \item Can voting and hybrid pipelines improve quality without relying on one expensive model?
+  \item Can specific voting schemes and selective hybrid routing improve quality without relying on an expensive model for every sample?
 \end{itemize}
 
-\highlightbox{Research question.}{Which model families work best across domains, and when do hybrid strategies actually help?}
+\highlightbox{Research question:}{Which model families work best across domains, and when do hybrid strategies actually help?}
 
 \postersection{Datasets}
 We evaluate six public benchmarks spanning finance, reviews, and social media, which together yield nine experimental configurations.
@@ -186,8 +189,8 @@ Classical and shallow neural models remain competitive on some noisy benchmarks,
 Finance-50 & \transformer{DistilRoBERTa} & 0.865 \\
 Finance-66 & \transformer{DistilRoBERTa} & 0.884 \\
 Finance-75 & \transformer{DistilRoBERTa} & 0.938 \\
-Finance-All & \transformer{DistilRoBERTa} & \best{0.971} \\
-IMDB & \llm{Gemini} & \good{0.958} \\
+Finance-All & \transformer{DistilRoBERTa} & \textbf{0.971} \\
+IMDB & \llm{Gemini} & 0.958 \\
 TE-Irony & \llm{Gemini} & 0.809 \\
 TE-Sentiment & \transformer{DistilRoBERTa} & 0.707 \\
 Twitter & \deep{CNN} & 0.866 \\
@@ -198,7 +201,7 @@ Yelp-Full & \llm{Mistral} & 0.666 \\
 
 Several individual results are especially informative. DistilRoBERTa reaches 0.971 on Finance-All and remains the strongest single model on all four finance subsets. Gemini reaches 0.958 on IMDB and 0.809 on TweetEval-Irony, showing that LLMs can be most effective on linguistically complex tasks. On Twitter, however, CNN reaches 0.866 and clearly outperforms all LLMs, which confirms that noisy short-form text often favors more task-specific architectures.
 
-\highlightbox{Main observation.}{No single model family dominates across all datasets: transformers lead in finance, LLMs are strongest on IMDB and irony, while CNN-based models perform best on Twitter.}
+\highlightbox{Main observation:}{No single model family dominates across all datasets: transformers lead in finance, LLMs are strongest on IMDB and irony, while CNN-based models perform best on Twitter.}
 
 \postersection{Voting and Hybrid Strategies}
 After benchmarking single models, we test whether combining predictions improves robustness.
@@ -210,10 +213,6 @@ After benchmarking single models, we test whether combining predictions improves
 \end{itemize}
 
 The most reliable ensemble strategy is confidence-weighted voting, while Twitter is the clearest example that not every model should always be included. The hybrid cascade with a 0.90 confidence threshold gives the most stable quality-cost trade-off across datasets.
-
-\begin{center}
-\highlightbox{Cascade.}{TF-IDF + SVM $\rightarrow$ CNN $\rightarrow$ LSTM $\rightarrow$ DistilRoBERTa $\rightarrow$ Gemini}
-\end{center}
 
 \begin{center}
 \rowcolors{2}{PosterBlue!4}{white}
@@ -231,25 +230,25 @@ The most reliable ensemble strategy is confidence-weighted voting, while Twitter
 
 \begin{center}
 \rowcolors{2}{PosterBlue!4}{white}
-\begin{tabular}{>{\raggedright\arraybackslash}p{0.34\linewidth} >{\centering\arraybackslash}p{0.19\linewidth} >{\centering\arraybackslash}p{0.18\linewidth} >{\centering\arraybackslash}p{0.19\linewidth}}
+{\fontsize{12}{14}\selectfont
+\setlength{\tabcolsep}{5pt}
+\begin{tabular}{>{\raggedright\arraybackslash}p{0.20\linewidth} >{\centering\arraybackslash}p{0.12\linewidth} >{\centering\arraybackslash}p{0.13\linewidth} >{\centering\arraybackslash}p{0.13\linewidth} >{\centering\arraybackslash}p{0.13\linewidth} >{\centering\arraybackslash}p{0.16\linewidth}}
 \toprule
 \headerrow
-\textbf{Dataset} & \textbf{Best single} & \textbf{Ensemble} & \textbf{Delta} \\
+\textbf{Dataset} & \textbf{Best single} & \llmstrategy{LLM-only} & \crossstrategy{Majority} & \cascadestrategy{Conf-casc} & \crossstrategy{Maj. no LLM} \\
 \midrule
-Finance-66 & 0.884 & 0.912 & \best{+0.028} \\
-Finance-75 & 0.938 & 0.964 & \good{+0.026} \\
-Finance-All & 0.971 & 0.980 & \good{+0.009} \\
-IMDB & 0.958 & 0.959 & \good{+0.001} \\
-Twitter & 0.866 & 0.891* & \good{+0.025} \\
-Yelp-Full & 0.666 & 0.659 & \hardcase{-0.007} \\
+Finance-66 & 0.884 & 0.880 & 0.908 & \textbf{0.912} & 0.856 \\
+Finance-75 & 0.938 & 0.912 & 0.960 & \textbf{0.964} & 0.907 \\
+Finance-All & 0.971 & 0.934 & 0.976 & \textbf{0.980} & 0.916 \\
+IMDB & 0.958 & \textbf{0.959} & \textbf{0.959} & \textbf{0.959} & 0.930 \\
+Twitter & 0.866 & 0.556 & 0.863 & 0.870 & \textbf{0.891} \\
+Yelp-Full & 0.666 & \textbf{0.660} & 0.652 & 0.659 & 0.594 \\
 \bottomrule
 \end{tabular}
-
-\vspace{0.3em}
-{\small * Majority voting without LLMs was best on Twitter.}
+}
 \end{center}
 
-The cross-model results show that confidence-weighted voting is the most reliable ensemble strategy, producing the best result on eight of nine datasets and reaching gains of up to +2.8 percentage points relative to the best single model. The exception is Twitter, where excluding LLMs from majority voting produces the strongest ensemble because the three generative models underperform the CNN and LSTM baselines on that dataset.
+The voting comparison shows that LLM-only aggregation can help on selected datasets, but confidence-weighted cross-model voting is the most reliable option overall. The clearest exception is Twitter, where majority voting without LLMs performs best because the three generative models underperform the CNN and LSTM baselines on that dataset.
 
 The hybrid cascade tells a slightly different story. Threshold 0.98 sometimes gives the highest accuracy, but it is unstable and routes many more samples to the final expensive model. Threshold 0.90 is therefore the most practical operating point: it preserves competitive accuracy while offloading a large share of examples to cheaper models earlier in the pipeline.
 
@@ -276,7 +275,7 @@ The overlap structure is not only a descriptive result. It explains why adding m
 Finance-All & 0.308 & 0.106 & \best{1.10} & \best{0.00} \\
 IMDB & 0.372 & 0.178 & 2.62 & 0.50 \\
 TE-Sentiment & 0.519 & 0.344 & \warn{21.39} & \warn{3.37} \\
-Yelp-Full & \hardcase{0.556} & \hardcase{0.429} & \hardcase{32.84} & \hardcase{7.88} \\
+Yelp-Full & 0.556 & 0.429 & \hardcase{32.84} & \hardcase{7.88} \\
 \bottomrule
 \end{tabular}
 \end{center}
@@ -298,12 +297,6 @@ The broader implication is that fixed voting has a real ceiling. When most archi
 \end{itemize}%
 }
 
-\textbf{Scientific contribution.} The study combines a unified multidomain comparison of five model families with a practical evaluation of three hybrid strategies and an error-overlap analysis that explains when aggregation can and cannot help.
-
-\vfill
-
-{\small
-\textbf{Demo note.} This poster follows a simplified two-column structure derived from the article in \texttt{paper/IEEE-conference-template-062824.tex}. It is intended as a concise conference-poster version of the full paper.
-}
+\highlightbox{Scientific contribution:}{The study combines a unified multidomain comparison of five model families with a practical evaluation of three hybrid strategies and an error-overlap analysis that explains when aggregation can and cannot help.}
 
 \end{document}
