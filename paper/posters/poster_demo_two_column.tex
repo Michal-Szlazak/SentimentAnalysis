@@ -129,7 +129,7 @@
     }%
   }\par
   \vspace{0.9em}
-  \takeawaybox{Sentiment models specialise by domain - no single architecture wins everywhere. Combining diverse model families through confidence-weighted voting consistently beats any individual model.}
+  \takeawaybox{No single model family excels in all scenarios, but their failures are complementary. Confidence-weighted voting across diverse families consistently outperforms any individual model, while a confidence cascade achieves comparable gains at a fraction of the inference cost.}
   \vspace{1.1em}
 ]
 
@@ -270,6 +270,6 @@ Finance-All has 0\% all-fail samples - every error is correctable by some model 
 }
 
 \vspace{0.5em}
-\highlightbox{Contribution:}{We benchmark nine models across five families on six datasets, test five ensemble strategies, and use error-overlap analysis to show when - and why - combining diverse models actually helps.}
+\highlightbox{Contribution:}{We benchmark nine models from five distinct families across six datasets. By testing five ensemble strategies and employing error-overlap analysis, we characterize when and why combining diverse model architectures yields performance gains.}
 
 \end{document}
