@@ -129,7 +129,7 @@
     }%
   }\par
   \vspace{0.9em}
-  \takeawaybox{No single sentiment model dominates across all domains. Confidence-weighted voting across architecturally diverse model families reliably improves over any single model.}
+  \takeawaybox{Sentiment models specialise by domain - no single architecture wins everywhere. Combining diverse model families through confidence-weighted voting consistently beats any individual model.}
   \vspace{1.1em}
 ]
 
@@ -199,7 +199,7 @@ We test five combination strategies - from simple majority voting to cost-aware 
 \llmstrategy{LLM-only voting} & combine Gemini, Mistral, Llama & small gains on selected datasets; helps most on finance \\
 \crossstrategy{Majority voting} & all nine models vote equally & effective when errors are complementary across families \\
 \crossstrategy{Conf-weighted voting} & weight each vote by model confidence & most reliable strategy; best on 8 of 9 datasets \\
-\cascadestrategy{Confidence cascade} & route easy cases to cheaper models (SVM$\to$CNN$\to$LSTM$\to$DistilRoBERTa$\to$Gemini) & best cost--quality trade-off; threshold 0.90 most stable \\
+\cascadestrategy{Confidence cascade} & route by confidence:\newline SVM\textrightarrow CNN\textrightarrow LSTM\newline \textrightarrow RoBERTa\textrightarrow Gemini & best cost--quality trade-off; threshold 0.90 most stable \\
 \crossstrategy{Majority (no LLMs)} & same as majority voting but Gemini, Mistral, and Llama excluded & recovers accuracy on datasets where LLMs underperform classical models \\
 \bottomrule
 \end{tabular}
@@ -224,7 +224,7 @@ Yelp-Full   & 0.666 & 0.660 & 0.652 & \best{0.659} & 0.626 & 0.594 \\
 \end{tabular}
 
 \vspace{3pt}
-{\fontsize{15}{18}\selectfont\color{PosterBlue}\itshape TweetEval Irony, TweetEval Sentiment, and Finance-66 subset omitted; hybrid results mirror single-model rankings on those datasets.}
+{\fontsize{15}{18}\selectfont\color{PosterBlue}\itshape TweetEval Irony and TweetEval Sentiment omitted; hybrid results mirror single-model rankings on those datasets.}
 }
 \end{center}
 
@@ -248,7 +248,7 @@ We measure Jaccard similarity between each pair of models' error sets to quantif
 \midrule
 Finance-All & 0.308 & 0.106 & \best{1.10} & \best{0.00} \\
 IMDB & 0.372 & 0.178 & 2.62 & 0.50 \\
-TE-Sentiment & 0.519 & 0.344 & \warn{21.39} & \warn{3.37} \\
+TweetEval Sent. & 0.519 & 0.344 & \warn{21.39} & \warn{3.37} \\
 Yelp-Full & 0.556 & 0.429 & \hardcase{32.84} & \hardcase{7.88} \\
 \bottomrule
 \end{tabular}
@@ -270,6 +270,6 @@ Finance-All has 0\% all-fail samples - every error is correctable by some model 
 }
 
 \vspace{0.5em}
-\highlightbox{Scientific contribution:}{A unified multidomain comparison of five model families combined with an evaluation of five combination strategies and an error-overlap analysis that explains when and why aggregation helps.}
+\highlightbox{Contribution:}{We benchmark nine models across five families on six datasets, test five ensemble strategies, and use error-overlap analysis to show when - and why - combining diverse models actually helps.}
 
 \end{document}
